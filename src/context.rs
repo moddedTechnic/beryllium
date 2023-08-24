@@ -28,10 +28,10 @@ impl Context {
         self.variables.insert(identifier, self.stack_size);
     }
 
-    pub fn get_variable(&mut self, identifier: String) -> Option<String> {
-        match self.variables.get(&identifier) {
+    pub fn get_variable(&mut self, identifier: &String) -> Option<String> {
+        match self.variables.get(identifier) {
             Some(offset) => Some(
-                self.push(format!("qword [rsp + {}]", self.stack_size - offset))
+                self.push(format!("qword [rsp + {}]", (self.stack_size - offset) * 8))
             ),
             None => None,
         }

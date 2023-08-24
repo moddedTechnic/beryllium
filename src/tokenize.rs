@@ -45,6 +45,7 @@ pub enum Symbol {
     LParen, RParen,
     Semi,
     Equals,
+    Plus, Minus, Star, Slash,
 }
 
 
@@ -113,6 +114,11 @@ impl TokenStream {
             '(' => Ok(Symbol::LParen),
             ')' => Ok(Symbol::RParen),
             ';' => Ok(Symbol::Semi),
+
+            '+' => Ok(Symbol::Plus),
+            '-' => Ok(Symbol::Minus),
+            '*' => Ok(Symbol::Star),
+            '/' => Ok(Symbol::Slash),
             _ => Err(
                 TokenizerError::UnrecognizedCharacter(character)
             ),

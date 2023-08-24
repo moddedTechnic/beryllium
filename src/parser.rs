@@ -2,7 +2,17 @@ use std::collections::VecDeque;
 
 use fallible_iterator::FallibleIterator;
 
-use crate::{tokenize::{Keyword, Symbol, TokenStream, Token, TokenizerError}, ast::{Program, Statement, Expr}};
+use crate::{
+    tokenize::{
+        Keyword, Symbol,
+        TokenStream, Token,
+        TokenizerError,
+    },
+    ast::{
+        Atom, Expr,
+        Program, Statement,
+    },
+};
 
 
 #[derive(Clone, Debug)]
@@ -102,9 +112,33 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = Expr::Atom(self.parse_atom()?);
+        if let Some(tok) = self.peek()? {
+            match tok {
+                Token::Symbol(Symbol::Plus) => {
+                    self.consume()?;
+                    expr = Expr::Add(
+                        Box::new(expr),
+                        Box::new(Expr::Atom(self.parse_atom()?))
+                    );
+                },
+                Token::Symbol(Symbol::Minus) => {
+                    self.consume()?;
+                    expr = Expr::Sub(
+                        Box::new(expr),
+                        Box::new(Expr::Atom(self.parse_atom()?))
+                    );
+                },
+                _ => (),
+            }
+        }
+        Ok(expr)
+    }
+
+    fn parse_atom(&mut self) -> Result<Atom, ParseError> {
         match self.peek()?.expect("a token") {
-            Token::IntegerLiteral(lit) => { self.consume()?; Ok(Expr::IntegerLiteral(lit)) },
-            Token::Identifier(ident) => { self.consume()?; Ok(Expr::Identifier(ident)) }
+            Token::IntegerLiteral(lit) => { self.consume()?; Ok(Atom::IntegerLiteral(lit)) },
+            Token::Identifier(ident) => { self.consume()?; Ok(Atom::Identifier(ident)) }
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
     }
