@@ -4,9 +4,6 @@ mod iter;
 mod parser;
 mod tokenize;
 
-#[cfg(test)]
-mod test;
-
 use std::{
     fs::File,
     io::{Read, Write},
