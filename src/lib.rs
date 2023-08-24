@@ -1,5 +1,4 @@
 mod ast;
-mod cli;
 mod context;
 mod iter;
 mod parser;
@@ -11,11 +10,10 @@ mod test;
 use std::{
     fs::File,
     io::{Read, Write},
+    path::PathBuf,
 };
 
-use clap::Parser;
-
-use crate::{cli::Cli, context::Context};
+use crate::context::Context;
 
 
 trait RunCommand {
@@ -36,7 +34,23 @@ impl RunCommand for std::process::Command {
 }
 
 
-fn compile(args: &cli::CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Clone, Debug)]
+pub struct CompileArgs {
+    pub source_file: PathBuf,
+    pub target_file: Option<PathBuf>,
+}
+
+impl CompileArgs {
+    pub fn get_target_file(&self) -> PathBuf {
+        match &self.target_file {
+            Some(target_file) => target_file.clone(),
+            None => self.source_file.with_extension(""),
+        }
+    }
+}
+
+
+pub fn compile(args: &CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
     use crate::{
         parser::Parser,
         tokenize::Tokenize,
@@ -64,34 +78,25 @@ fn compile(args: &cli::CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
     let generated_code = tree.codegen(&mut context)?;
 
     println!("    writing");
-    File::create(args.get_target_file())?
+    let target_file = args.get_target_file();
+    File::create(target_file.with_extension("asm"))?
         .write_all(generated_code.as_bytes())?;
 
     println!("    assembling");
     use std::process::Command;
     let mut command = Command::new("nasm");
     command.arg("-felf64")
-           .arg(&args.source_file.with_extension("asm"));
+           .arg(target_file.with_extension("asm"));
     println!("        running `{:?}`", command);
     command.run()?;
     
     println!("    linking");
     let mut command = Command::new("ld");
-    command.arg(args.source_file.with_extension("o"))
-           .arg("-o").arg(args.source_file.with_extension(""));
+    command.arg(target_file.with_extension("o"))
+           .arg("-o").arg(target_file);
     println!("        running `{:?}`", command);
     command.run()?;
 
     Ok(())
-}
-
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use crate::cli::Command;
-
-    let cli = Cli::parse();
-    match &cli.command {
-        Command::Compile(args) => compile(args),
-    }
 }
 

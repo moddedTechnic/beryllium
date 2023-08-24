@@ -1,3 +1,4 @@
+
 use std::path::PathBuf;
 
 use clap::{Args, Parser as ArgParser, Subcommand};
@@ -6,7 +7,7 @@ use clap::{Args, Parser as ArgParser, Subcommand};
 #[derive(ArgParser)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Command,
+    command: Command,
 }
 
 #[derive(Subcommand)]
@@ -16,16 +17,25 @@ pub enum Command {
 
 #[derive(Args)]
 pub struct CompileArgs {
-    pub source_file: PathBuf,
+    source_file: PathBuf,
     target_file: Option<PathBuf>,
 }
 
-impl CompileArgs {
-    pub fn get_target_file(&self) -> PathBuf {
-        match &self.target_file {
-            Some(target_file) => target_file.clone(),
-            None => self.source_file.with_extension("asm"),
+impl From<CompileArgs> for beryllium::CompileArgs {
+    fn from(value: CompileArgs) -> Self {
+        Self {
+            source_file: value.source_file,
+            target_file: value.target_file,
         }
     }
+}
+
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let command = Cli::parse();
+    match command.command {
+        Command::Compile(args) => beryllium::compile(&args.into())?,
+    };
+    Ok(())
 }
 
