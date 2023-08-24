@@ -4,24 +4,24 @@ use fallible_iterator::FallibleIterator;
 
 
 pub trait Tokenize {
-    fn tokenize(self) -> Lexer;
+    fn tokenize(self) -> TokenStream;
 }
 
 impl Tokenize for String {
-    fn tokenize(self) -> Lexer {
-        Lexer::new(self.chars().collect())
+    fn tokenize(self) -> TokenStream {
+        TokenStream::new(self.chars().collect())
     }
 }
 
 impl Tokenize for &str {
-    fn tokenize(self) -> Lexer {
-        Lexer::new(self.chars().collect())
+    fn tokenize(self) -> TokenStream {
+        TokenStream::new(self.chars().collect())
     }
 }
 
 impl Tokenize for Vec<char> {
-    fn tokenize(self) -> Lexer {
-        Lexer::new(self.into_iter().collect())
+    fn tokenize(self) -> TokenStream {
+        TokenStream::new(self.into_iter().collect())
     }
 }
 
@@ -47,18 +47,26 @@ pub enum Symbol {
 
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum LexerError {
+pub enum TokenizerError {
     UnrecognizedCharacter(char),
 }
 
+impl std::fmt::Display for TokenizerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{:?}", self)
+    }
+}
 
-pub struct Lexer {
+impl std::error::Error for TokenizerError {}
+
+
+pub struct TokenStream {
     source: VecDeque<char>,
 }
 
-impl Lexer {
+impl TokenStream {
     pub fn new(source: VecDeque<char>) -> Self {
-        Lexer { source }
+        TokenStream { source }
     }
 
     fn peek(&self) -> Option<char> {
@@ -94,23 +102,23 @@ impl Lexer {
         Token::IntegerLiteral(buffer)
     }
 
-    fn lex_symbol(&mut self) -> Result<Symbol, LexerError> {
+    fn lex_symbol(&mut self) -> Result<Symbol, TokenizerError> {
         let character = self .consume()
-            .ok_or(LexerError::UnrecognizedCharacter(0 as char))?;
+            .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))?;
         match character {
             '(' => Ok(Symbol::LParen),
             ')' => Ok(Symbol::RParen),
             ';' => Ok(Symbol::Semi),
             _ => Err(
-                LexerError::UnrecognizedCharacter(character)
+                TokenizerError::UnrecognizedCharacter(character)
             ),
         }
     }
 }
 
-impl FallibleIterator for Lexer {
+impl FallibleIterator for TokenStream {
     type Item = Token;
-    type Error = LexerError;
+    type Error = TokenizerError;
 
     fn next(&mut self) -> Result<Option<Self::Item>, Self::Error> {
         while let Some(character) = self.peek() {

@@ -4,7 +4,7 @@
 #[test]
 fn integer_literal_tokenizes() {
     use fallible_iterator::FallibleIterator;
-    use crate::lexer::{Tokenize, Token};
+    use crate::tokenize::{Tokenize, Token};
 
     let tokens: Result<Vec<_>, _> = "123".tokenize().collect();
     assert!(tokens.is_ok());
@@ -18,7 +18,7 @@ fn integer_literal_tokenizes() {
 #[test]
 fn many_integer_literals_tokenize() {
     use fallible_iterator::FallibleIterator;
-    use crate::lexer::{Tokenize, Token};
+    use crate::tokenize::{Tokenize, Token};
 
     let tokens: Result<Vec<_>, _> = "123 456 789".tokenize().collect();
     assert!(tokens.is_ok());
@@ -38,7 +38,7 @@ fn many_integer_literals_tokenize() {
 #[test]
 fn identifier_tokenizes() {
     use fallible_iterator::FallibleIterator;
-    use crate::lexer::{Tokenize, Token};
+    use crate::tokenize::{Tokenize, Token};
 
     let tokens: Result<Vec<_>, _> = "main".tokenize().collect();
     assert!(tokens.is_ok());
@@ -51,7 +51,7 @@ fn identifier_tokenizes() {
 #[test]
 fn many_identifiers_tokenize() {
     use fallible_iterator::FallibleIterator;
-    use crate::lexer::{Tokenize, Token};
+    use crate::tokenize::{Tokenize, Token};
 
     let tokens: Result<Vec<_>, _> = "main _start foo".tokenize().collect();
     assert!(tokens.is_ok());
@@ -71,7 +71,7 @@ fn many_identifiers_tokenize() {
 #[test]
 fn keyword_exit_tokenizes() {
     use fallible_iterator::FallibleIterator;
-    use crate::lexer::{Tokenize, Keyword, Token};
+    use crate::tokenize::{Tokenize, Keyword, Token};
 
     let tokens: Result<Vec<_>, _> = "exit".tokenize().collect();
     assert!(tokens.is_ok());
