@@ -71,6 +71,20 @@ pub enum Expr {
     Atom(Atom),
     Add(Box<Expr>, Box<Expr>),
     Sub(Box<Expr>, Box<Expr>),
+    Mul(Box<Expr>, Box<Expr>),
+    Div(Box<Expr>, Box<Expr>),
+    Mod(Box<Expr>, Box<Expr>),
+}
+
+impl Expr {
+    fn prepare_binop_registers(context: &mut Context, a: Expr, b: Expr) -> Result {
+        let mut code = String::new();
+        code.push_str(a.codegen(context)?.as_str());
+        code.push_str(b.codegen(context)?.as_str());
+        code.push_str(context.pop("rbx").as_str());
+        code.push_str(context.pop("rax").as_str());
+        Ok(code)
+    }
 }
 
 impl Codegen for Expr {
@@ -78,23 +92,33 @@ impl Codegen for Expr {
         match self {
             Self::Atom(atom) => atom.codegen(context),
             Self::Add(a, b) => {
-                let mut code = String::new();
-                code.push_str(a.codegen(context)?.as_str());
-                code.push_str(b.codegen(context)?.as_str());
-                code.push_str(context.pop("rbx").as_str());
-                code.push_str(context.pop("rax").as_str());
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
                 code.push_str("    add rax, rbx\n");
                 code.push_str(context.push("rax").as_str());
                 Ok(code)
             },
             Self::Sub(a, b) => {
-                let mut code = String::new();
-                code.push_str(a.codegen(context)?.as_str());
-                code.push_str(b.codegen(context)?.as_str());
-                code.push_str(context.pop("rbx").as_str());
-                code.push_str(context.pop("rax").as_str());
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
                 code.push_str("    sub rax, rbx\n");
                 code.push_str(context.push("rax").as_str());
+                Ok(code)
+            },
+            Self::Mul(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code.push_str("    mul rbx\n");
+                code.push_str(context.push("rax").as_str());
+                Ok(code)
+            },
+            Self::Div(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code.push_str("    div rbx\n");
+                code.push_str(context.push("rax").as_str());
+                Ok(code)
+            },
+            Self::Mod(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code.push_str("    div rbx\n");
+                code.push_str(context.push("rdx").as_str());
                 Ok(code)
             },
         }
