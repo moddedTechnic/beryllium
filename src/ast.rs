@@ -21,6 +21,7 @@ impl Program {
 #[derive(Clone, Debug)]
 pub enum Statement {
     Exit { value: Expr },
+    Let { identifier: String, value: Expr },
 }
 
 impl Statement {
@@ -32,6 +33,11 @@ impl Statement {
                 code.push_str(context.pop("rdi").as_str());
                 code.push_str("    syscall\n");
                 Ok(code)
+            },
+            Self::Let { identifier, value } => {
+                let code = value.codegen(context);
+                context.declare_variable(identifier);
+                code
             }
         }
     }
@@ -41,12 +47,14 @@ impl Statement {
 #[derive(Clone, Debug)]
 pub enum Expr {
     IntegerLiteral(String),
+    Identifier(String),
 }
 
 impl Expr {
     fn codegen(self, context: &mut Context) -> Result<String, ()> {
         match self {
             Self::IntegerLiteral(value) => Ok(context.push(value)),
+            Self::Identifier(ident) => Ok(context.get_variable(ident).ok_or(())?),
         }
     }
 }

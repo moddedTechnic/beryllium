@@ -1,4 +1,4 @@
 #![cfg(test)]
 
-mod lexer;
+mod tokenize;
 

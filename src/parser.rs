@@ -72,6 +72,29 @@ impl Parser {
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     Ok(Statement::Exit { value })
+                },
+                Keyword::Let => {
+                    self.consume()?;
+                    let identifier = match self.consume()?.expect("an identifier") {
+                        Token::Identifier(identifier) => identifier,
+                        tok => return Err(ParseError::UnexpectedToken(tok)),
+                    };
+                    match self.consume()?.expect("an equals sign") {
+                        Token::Symbol(equals) => match equals {
+                            Symbol::Equals => (),
+                            sym => return Err(ParseError::UnexpectedToken(Token::Symbol(sym))),
+                        },
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    let value = self.parse_expression()?;
+                    match self.consume()?.expect("a semicolon") {
+                        Token::Symbol(semi) => match semi {
+                            Symbol::Semi => (),
+                            sym => return Err(ParseError::UnexpectedToken(Token::Symbol(sym))),
+                        },
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    Ok(Statement::Let { identifier, value })
                 }
             },
             tok => Err(ParseError::UnexpectedToken(tok)),
@@ -81,6 +104,7 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
         match self.peek()?.expect("a token") {
             Token::IntegerLiteral(lit) => { self.consume()?; Ok(Expr::IntegerLiteral(lit)) },
+            Token::Identifier(ident) => { self.consume()?; Ok(Expr::Identifier(ident)) }
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
     }

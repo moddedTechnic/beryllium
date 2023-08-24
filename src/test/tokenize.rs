@@ -81,3 +81,17 @@ fn keyword_exit_tokenizes() {
     assert_eq!(token, Token::Keyword(Keyword::Exit));
 }
 
+#[test]
+fn keyword_let_tokenizes() {
+    use fallible_iterator::FallibleIterator;
+    use crate::tokenize::{Tokenize, Keyword, Token};
+
+    let tokens: Result<Vec<_>, _> = "let".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+    assert_eq!(tokens.len(), 1);
+    let token = tokens.get(0).unwrap().clone();
+    assert_eq!(token, Token::Keyword(Keyword::Let));
+}
+
+
