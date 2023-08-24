@@ -1,5 +1,6 @@
 mod ast;
 mod cli;
+mod context;
 mod parser;
 mod tokenize;
 
@@ -13,7 +14,7 @@ use std::{
 
 use clap::Parser;
 
-use crate::cli::Cli;
+use crate::{cli::Cli, context::Context};
 
 
 trait RunCommand {
@@ -56,7 +57,8 @@ fn compile(args: &cli::CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
     let tree = parser.parse()?;
 
     println!("    codegen");
-    let generated_code = tree.codegen().unwrap();
+    let mut context = Context::new();
+    let generated_code = tree.codegen(&mut context).unwrap();
 
     println!("    writing");
     File::create(args.get_target_file())?.write_all(generated_code.as_bytes())?;
