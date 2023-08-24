@@ -2,7 +2,17 @@ use std::collections::VecDeque;
 
 use fallible_iterator::FallibleIterator;
 
-use crate::{tokenize::{Keyword, Symbol, TokenStream, Token, TokenizerError}, ast::{Program, Statement, Expr}};
+use crate::{
+    tokenize::{
+        Keyword, Symbol,
+        TokenStream, Token,
+        TokenizerError,
+    },
+    ast::{
+        Atom, Expr,
+        Program, Statement,
+    },
+};
 
 
 #[derive(Clone, Debug)]
@@ -102,9 +112,68 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_expression_mul_part()?;
+        if let Some(tok) = self.peek()? {
+            match tok {
+                Token::Symbol(Symbol::Plus) => {
+                    self.consume()?;
+                    expr = Expr::Add(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_mul_part()?)
+                    );
+                },
+                Token::Symbol(Symbol::Minus) => {
+                    self.consume()?;
+                    expr = Expr::Sub(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_mul_part()?)
+                    );
+                },
+                _ => (),
+            }
+        }
+        Ok(expr)
+    }
+
+    fn parse_expression_mul_part(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_expression_atom_part()?;
+        if let Some(tok) = self.peek()? {
+            match tok {
+                Token::Symbol(Symbol::Star) => {
+                    self.consume()?;
+                    expr = Expr::Mul(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_atom_part()?)
+                    );
+                },
+                Token::Symbol(Symbol::Slash) => {
+                    self.consume()?;
+                    expr = Expr::Div(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_atom_part()?)
+                    );
+                },
+                Token::Symbol(Symbol::Percent) => {
+                    self.consume()?;
+                    expr = Expr::Mod(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_atom_part()?)
+                    );
+                },
+                _ => (),
+            }
+        }
+        Ok(expr)
+    }
+
+    fn parse_expression_atom_part(&mut self) -> Result<Expr, ParseError> {
+        self.parse_atom().map(Expr::Atom)
+    }
+
+    fn parse_atom(&mut self) -> Result<Atom, ParseError> {
         match self.peek()?.expect("a token") {
-            Token::IntegerLiteral(lit) => { self.consume()?; Ok(Expr::IntegerLiteral(lit)) },
-            Token::Identifier(ident) => { self.consume()?; Ok(Expr::Identifier(ident)) }
+            Token::IntegerLiteral(lit) => { self.consume()?; Ok(Atom::IntegerLiteral(lit)) },
+            Token::Identifier(ident) => { self.consume()?; Ok(Atom::Identifier(ident)) }
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
     }

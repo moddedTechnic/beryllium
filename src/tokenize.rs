@@ -45,6 +45,8 @@ pub enum Symbol {
     LParen, RParen,
     Semi,
     Equals,
+    Plus, Minus, Star,
+    Slash, Percent,
 }
 
 
@@ -113,6 +115,12 @@ impl TokenStream {
             '(' => Ok(Symbol::LParen),
             ')' => Ok(Symbol::RParen),
             ';' => Ok(Symbol::Semi),
+
+            '+' => Ok(Symbol::Plus),
+            '-' => Ok(Symbol::Minus),
+            '*' => Ok(Symbol::Star),
+            '/' => Ok(Symbol::Slash),
+            '%' => Ok(Symbol::Percent),
             _ => Err(
                 TokenizerError::UnrecognizedCharacter(character)
             ),

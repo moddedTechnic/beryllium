@@ -94,4 +94,32 @@ fn keyword_let_tokenizes() {
     assert_eq!(token, Token::Keyword(Keyword::Let));
 }
 
+#[test]
+fn maths_expression_tokenizes() {
+    use fallible_iterator::FallibleIterator;
+    use crate::tokenize::{Tokenize, Symbol, Token};
+
+    let tokens: Result<Vec<_>, _> = "1 + 2 - 3 * 4 / 5 % 6".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+    assert_eq!(tokens.len(), 11);
+
+    let expected_tokens = vec![
+        Token::IntegerLiteral(String::from("1")),
+        Token::Symbol(Symbol::Plus),
+        Token::IntegerLiteral(String::from("2")),
+        Token::Symbol(Symbol::Minus),
+        Token::IntegerLiteral(String::from("3")),
+        Token::Symbol(Symbol::Star),
+        Token::IntegerLiteral(String::from("4")),
+        Token::Symbol(Symbol::Slash),
+        Token::IntegerLiteral(String::from("5")),
+        Token::Symbol(Symbol::Percent),
+        Token::IntegerLiteral(String::from("6")),
+    ];
+
+    for (token, expected_token) in tokens.into_iter().zip(expected_tokens) {
+        assert_eq!(token, expected_token);
+    }
+}
 

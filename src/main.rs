@@ -1,6 +1,7 @@
 mod ast;
 mod cli;
 mod context;
+mod iter;
 mod parser;
 mod tokenize;
 
@@ -45,7 +46,8 @@ fn compile(args: &cli::CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     let source_code = {
         let mut buffer = String::new();
-        File::open(&args.source_file)?.read_to_string(&mut buffer)?;
+        File::open(&args.source_file)?
+            .read_to_string(&mut buffer)?;
         buffer
     };
 
@@ -57,11 +59,13 @@ fn compile(args: &cli::CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
     let tree = parser.parse()?;
 
     println!("    codegen");
+    use crate::ast::Codegen;
     let mut context = Context::new();
-    let generated_code = tree.codegen(&mut context).unwrap();
+    let generated_code = tree.codegen(&mut context)?;
 
     println!("    writing");
-    File::create(args.get_target_file())?.write_all(generated_code.as_bytes())?;
+    File::create(args.get_target_file())?
+        .write_all(generated_code.as_bytes())?;
 
     println!("    assembling");
     use std::process::Command;
