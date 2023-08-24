@@ -37,12 +37,14 @@ pub enum Token {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Keyword {
     Exit,
+    Let,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Symbol {
     LParen, RParen,
     Semi,
+    Equals,
 }
 
 
@@ -87,6 +89,7 @@ impl TokenStream {
         };
         match buffer.as_str() {
             "exit" => Token::Keyword(Keyword::Exit),
+            "let" => Token::Keyword(Keyword::Let),
             _ => Token::Identifier(buffer),
         }
     }
@@ -106,6 +109,7 @@ impl TokenStream {
         let character = self .consume()
             .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))?;
         match character {
+            '=' => Ok(Symbol::Equals),
             '(' => Ok(Symbol::LParen),
             ')' => Ok(Symbol::RParen),
             ';' => Ok(Symbol::Semi),

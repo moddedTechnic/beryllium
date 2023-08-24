@@ -72,7 +72,8 @@ impl Parser {
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     Ok(Statement::Exit { value })
-                }
+                },
+                kwd => Err(ParseError::UnexpectedToken(Token::Keyword(kwd)))
             },
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
