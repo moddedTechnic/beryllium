@@ -3,14 +3,6 @@ name = "beryllium"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
-name = "beryllium"
-path = "src/lib.rs"
-
-[[bin]]
-name = "beryllium-cli"
-path = "src/cli.rs"
-
 
 [dependencies]
 clap = { version = "4.3.24", features = ["derive"] }
