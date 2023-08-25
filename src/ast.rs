@@ -43,6 +43,7 @@ impl Codegen for Program {
 #[derive(Clone, Debug)]
 pub enum Statement {
     Exit { value: Expr },
+    If { check: Expr, body: Box<Statement>, els: Option<Box<Statement>> },
     Let { identifier: String, value: Expr },
 }
 
@@ -60,6 +61,23 @@ impl Codegen for Statement {
                 let code = value.codegen(context);
                 context.declare_variable(identifier);
                 code
+            },
+            Self::If { check, body, els } => {
+                let else_label = context.create_label("else");
+                let endif_label = context.create_label("endif");
+
+                let mut code = check.codegen(context)?;
+                code += context.pop("rax").as_str();
+                code += "    or rax, rax\n";
+                code += format!("    jz {else_label}\n").as_str();
+                code += body.codegen(context)?.as_str();
+                code += format!("    jmp {endif_label}\n").as_str();
+                code += format!("{else_label}:\n").as_str();
+                if let Some(els) = els {
+                    code += els.codegen(context)?.as_str();
+                }
+                code += format!("{endif_label}:\n").as_str();
+                Ok(code)
             }
         }
     }

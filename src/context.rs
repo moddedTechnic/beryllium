@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub struct Context {
     stack_size: u64,
     variables: HashMap<String, u64>,
+    label_counts: HashMap<String, u64>,
 }
 
 impl Context {
@@ -11,6 +12,7 @@ impl Context {
         Self {
             stack_size: 0,
             variables: HashMap::new(),
+            label_counts: HashMap::new(),
         }
     }
 
@@ -35,6 +37,14 @@ impl Context {
             ),
             None => None,
         }
+    }
+
+    pub fn create_label<S: Into<String>>(&mut self, tag: S) -> String {
+        let tag: String = tag.into();
+        let entry = self.label_counts.entry(tag.clone()).or_insert(0);
+        let index = *entry;
+        *entry += 1;
+        format!("{tag}{index:08x}")
     }
 }
 

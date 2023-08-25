@@ -24,6 +24,10 @@ fn examples() {
         ("maths_mul_variables.be", 8),
         ("maths_sub_simple.be", 1),
         ("maths_sub_variables.be", 2),
+        ("if_simple_true.be", 1),
+        ("if_simple_false.be", 0),
+        ("if_else_true.be", 0),
+        ("if_else_false.be", 1),
     ]);
     let examples_dir = PathBuf::from("examples");
     let build_dir = PathBuf::from("examples/build");

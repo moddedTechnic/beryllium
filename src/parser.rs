@@ -60,25 +60,16 @@ impl Parser {
                 Keyword::Exit => {
                     self.consume()?;
                     match self.consume()?.expect("a left parenthesis") {
-                        Token::Symbol(lparen) => match lparen {
-                            Symbol::LParen => (),
-                            sym => return Err(ParseError::UnexpectedToken(Token::Symbol(sym))),
-                        },
+                        Token::Symbol(Symbol::LParen) => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     let value = self.parse_expression()?;
                     match self.consume()?.expect("a right parenthesis") {
-                        Token::Symbol(rparen) => match rparen {
-                            Symbol::RParen => (),
-                            sym => return Err(ParseError::UnexpectedToken(Token::Symbol(sym))),
-                        },
+                        Token::Symbol(Symbol::RParen) => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     match self.consume()?.expect("a semicolon") {
-                        Token::Symbol(semi) => match semi {
-                            Symbol::Semi => (),
-                            sym => return Err(ParseError::UnexpectedToken(Token::Symbol(sym))),
-                        },
+                        Token::Symbol(Symbol::Semi) => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     Ok(Statement::Exit { value })
@@ -90,22 +81,38 @@ impl Parser {
                         tok => return Err(ParseError::UnexpectedToken(tok)),
                     };
                     match self.consume()?.expect("an equals sign") {
-                        Token::Symbol(equals) => match equals {
-                            Symbol::Equals => (),
-                            sym => return Err(ParseError::UnexpectedToken(Token::Symbol(sym))),
-                        },
+                        Token::Symbol(Symbol::Equals) => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     let value = self.parse_expression()?;
                     match self.consume()?.expect("a semicolon") {
-                        Token::Symbol(semi) => match semi {
-                            Symbol::Semi => (),
-                            sym => return Err(ParseError::UnexpectedToken(Token::Symbol(sym))),
-                        },
+                        Token::Symbol(Symbol::Semi) => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     Ok(Statement::Let { identifier, value })
-                }
+                },
+                Keyword::If => {
+                    self.consume()?;
+                    match self.consume()?.expect("a left parenthesis") {
+                        Token::Symbol(Symbol::LParen) => (),
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    let check = self.parse_expression()?;
+                    match self.consume()?.expect("a right parenthesis") {
+                        Token::Symbol(Symbol::RParen) => (),
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    let body = Box::new(self.parse_statement()?);
+                    let els = match self.peek()? {
+                        Some(Token::Keyword(Keyword::Else)) => {
+                            self.consume()?;
+                            Some(Box::new(self.parse_statement()?))
+                        },
+                        Some(_) | None => None,
+                    };
+                    Ok(Statement::If { check, body, els })
+                },
+                kwd => Err(ParseError::UnexpectedToken(Token::Keyword(kwd))),
             },
             tok => Err(ParseError::UnexpectedToken(tok)),
         }

@@ -38,6 +38,7 @@ pub enum Token {
 pub enum Keyword {
     Exit,
     Let,
+    If, Else,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -92,6 +93,8 @@ impl TokenStream {
         match buffer.as_str() {
             "exit" => Token::Keyword(Keyword::Exit),
             "let" => Token::Keyword(Keyword::Let),
+            "if" => Token::Keyword(Keyword::If),
+            "else" => Token::Keyword(Keyword::Else),
             _ => Token::Identifier(buffer),
         }
     }
@@ -248,6 +251,19 @@ fn keyword_let_tokenizes() {
     assert_eq!(tokens.len(), 1);
     let token = tokens.get(0).unwrap().clone();
     assert_eq!(token, Token::Keyword(Keyword::Let));
+}
+
+#[test]
+fn keyword_if_tokenizes() {
+    use fallible_iterator::FallibleIterator;
+    use crate::tokenize::{Tokenize, Keyword, Token};
+
+    let tokens: Result<Vec<_>, _> = "if".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+    assert_eq!(tokens.len(), 1);
+    let token = tokens.get(0).unwrap().clone();
+    assert_eq!(token, Token::Keyword(Keyword::If));
 }
 
 #[test]
