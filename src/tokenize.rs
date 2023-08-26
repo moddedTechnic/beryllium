@@ -26,8 +26,23 @@ impl Tokenize for Vec<char> {
 }
 
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Location {
+    pub index: u64,
+    pub line: u64,
+    pub column: u64,
+}
+
+
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Token {
+pub struct Token {
+    pub data: TokenData,
+    pub location: Location,
+}
+
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TokenData {
     Identifier(String),
     IntegerLiteral(String),
     Keyword(Keyword),
@@ -67,11 +82,12 @@ impl std::error::Error for TokenizerError {}
 
 pub struct TokenStream {
     source: VecDeque<char>,
+    location: Location,
 }
 
 impl TokenStream {
     pub fn new(source: VecDeque<char>) -> Self {
-        TokenStream { source }
+        TokenStream { source, location: Location::default() }
     }
 
     fn peek(&self) -> Option<char> {
@@ -79,39 +95,56 @@ impl TokenStream {
     }
 
     fn consume(&mut self) -> Option<char> {
-        self.source.pop_front()
+        match self.source.pop_front() {
+            Some(char) => {
+                self.location.index += 1;
+                self.location.column += 1;
+                if char == '\n' {
+                    self.location.line += 1;
+                    self.location.column = 0;
+                }
+                Some(char)
+            },
+            None => None,
+        }
     }
 
     fn lex_identifier(&mut self) -> Token {
         let mut buffer = String::new();
+        let location = self.location;
         while let Some(character) = self.peek() {
             if !character.is_alphanumeric() && character != '_' {
                 break;
             }
             buffer.push(self.consume().unwrap());
         };
-        match buffer.as_str() {
-            "exit" => Token::Keyword(Keyword::Exit),
-            "let" => Token::Keyword(Keyword::Let),
-            "if" => Token::Keyword(Keyword::If),
-            "else" => Token::Keyword(Keyword::Else),
-            _ => Token::Identifier(buffer),
-        }
+        let data = match buffer.as_str() {
+            "exit" => TokenData::Keyword(Keyword::Exit),
+            "let"  => TokenData::Keyword(Keyword::Let),
+            "if"   => TokenData::Keyword(Keyword::If),
+            "else" => TokenData::Keyword(Keyword::Else),
+            _ => TokenData::Identifier(buffer),
+        };
+        Token { data, location }
     }
 
     fn lex_number(&mut self) -> Token {
         let mut buffer = String::new();
+        let location = self.location;
         while let Some(character) = self.peek() {
             if !character.is_numeric() {
                 break;
             }
             buffer.push(self.consume().unwrap());
         };
-        Token::IntegerLiteral(buffer)
+        Token {
+            data: TokenData::IntegerLiteral(buffer),
+            location,
+        }
     }
 
     fn lex_symbol(&mut self) -> Result<Symbol, TokenizerError> {
-        let character = self .consume()
+        let character = self.consume()
             .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))?;
         match character {
             '=' => Ok(Symbol::Equals),
@@ -145,7 +178,11 @@ impl FallibleIterator for TokenStream {
                 self.consume();
                 continue;
             } else {
-                Ok(Some(Token::Symbol(self.lex_symbol()?)))
+                let location = self.location;
+                Ok(Some(Token {
+                    data: TokenData::Symbol(self.lex_symbol()?),
+                    location,
+                }))
             };
         }
         Ok(None)
@@ -162,136 +199,112 @@ impl FallibleIterator for TokenStream {
 
 #[test]
 fn integer_literal_tokenizes() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Token};
-
     let tokens: Result<Vec<_>, _> = "123".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone();
-    assert_eq!(token, Token::IntegerLiteral("123".into()));
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::IntegerLiteral("123".into()));
 }
 
 
 #[test]
 fn many_integer_literals_tokenize() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Token};
-
     let tokens: Result<Vec<_>, _> = "123 456 789".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 3);
 
-    let token = tokens.get(0).unwrap().clone();
-    assert_eq!(token, Token::IntegerLiteral("123".into()));
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::IntegerLiteral("123".into()));
 
-    let token = tokens.get(1).unwrap().clone();
-    assert_eq!(token, Token::IntegerLiteral("456".into()));
+    let token = tokens.get(1).unwrap().clone().data;
+    assert_eq!(token, TokenData::IntegerLiteral("456".into()));
 
-    let token = tokens.get(2).unwrap().clone();
-    assert_eq!(token, Token::IntegerLiteral("789".into()));
+    let token = tokens.get(2).unwrap().clone().data;
+    assert_eq!(token, TokenData::IntegerLiteral("789".into()));
 }
 
 #[test]
 fn identifier_tokenizes() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Token};
-
     let tokens: Result<Vec<_>, _> = "main".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone();
-    assert_eq!(token, Token::Identifier("main".into()));
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Identifier("main".into()));
 }
 
 #[test]
 fn many_identifiers_tokenize() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Token};
-
     let tokens: Result<Vec<_>, _> = "main _start foo".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 3);
 
-    let token = tokens.get(0).unwrap().clone();
-    assert_eq!(token, Token::Identifier("main".into()));
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Identifier("main".into()));
 
-    let token = tokens.get(1).unwrap().clone();
-    assert_eq!(token, Token::Identifier("_start".into()));
+    let token = tokens.get(1).unwrap().clone().data;
+    assert_eq!(token, TokenData::Identifier("_start".into()));
 
-    let token = tokens.get(2).unwrap().clone();
-    assert_eq!(token, Token::Identifier("foo".into()));
+    let token = tokens.get(2).unwrap().clone().data;
+    assert_eq!(token, TokenData::Identifier("foo".into()));
 }
 
 #[test]
 fn keyword_exit_tokenizes() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Keyword, Token};
-
     let tokens: Result<Vec<_>, _> = "exit".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone();
-    assert_eq!(token, Token::Keyword(Keyword::Exit));
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Keyword(Keyword::Exit));
 }
 
 #[test]
 fn keyword_let_tokenizes() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Keyword, Token};
-
     let tokens: Result<Vec<_>, _> = "let".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone();
-    assert_eq!(token, Token::Keyword(Keyword::Let));
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Keyword(Keyword::Let));
 }
 
 #[test]
 fn keyword_if_tokenizes() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Keyword, Token};
-
     let tokens: Result<Vec<_>, _> = "if".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone();
-    assert_eq!(token, Token::Keyword(Keyword::If));
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Keyword(Keyword::If));
 }
 
 #[test]
 fn maths_expression_tokenizes() {
-    use fallible_iterator::FallibleIterator;
-    use crate::tokenize::{Tokenize, Symbol, Token};
-
     let tokens: Result<Vec<_>, _> = "1 + 2 - 3 * 4 / 5 % 6".tokenize().collect();
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 11);
 
     let expected_tokens = vec![
-        Token::IntegerLiteral(String::from("1")),
-        Token::Symbol(Symbol::Plus),
-        Token::IntegerLiteral(String::from("2")),
-        Token::Symbol(Symbol::Minus),
-        Token::IntegerLiteral(String::from("3")),
-        Token::Symbol(Symbol::Star),
-        Token::IntegerLiteral(String::from("4")),
-        Token::Symbol(Symbol::Slash),
-        Token::IntegerLiteral(String::from("5")),
-        Token::Symbol(Symbol::Percent),
-        Token::IntegerLiteral(String::from("6")),
+        TokenData::IntegerLiteral(String::from("1")),
+        TokenData::Symbol(Symbol::Plus),
+        TokenData::IntegerLiteral(String::from("2")),
+        TokenData::Symbol(Symbol::Minus),
+        TokenData::IntegerLiteral(String::from("3")),
+        TokenData::Symbol(Symbol::Star),
+        TokenData::IntegerLiteral(String::from("4")),
+        TokenData::Symbol(Symbol::Slash),
+        TokenData::IntegerLiteral(String::from("5")),
+        TokenData::Symbol(Symbol::Percent),
+        TokenData::IntegerLiteral(String::from("6")),
     ];
 
     for (token, expected_token) in tokens.into_iter().zip(expected_tokens) {
-        assert_eq!(token, expected_token);
+        assert_eq!(token.data, expected_token);
     }
 }
 

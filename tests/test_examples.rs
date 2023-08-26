@@ -38,17 +38,21 @@ fn examples() {
     for (example, expected_code) in examples.iter() {
         let example_file = examples_dir.join(example);
         let target_file = build_dir.join(example);
-        println!("{example_file:?} => {target_file:?}");
+        println!("{example}");
         assert!(example_file.exists());
         let compile_args = beryllium::CompileArgs {
             source_file: example_file,
             target_file: Some(target_file.clone()),
         };
-        assert!(beryllium::compile(&compile_args).is_ok());
+        let compile_result = beryllium::compile(&compile_args);
+        println!("        {compile_result:?}");
+        assert!(compile_result.is_ok());
+        println!("    runnning");
         let output = Command::new(target_file).output().expect("executable runs correctly");
         let code = output.status.code();
         assert!(code.is_some());
         assert_eq!(code.unwrap(), *expected_code);
+        println!("    SUCCESS\n");
     }
 }
 

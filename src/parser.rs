@@ -5,11 +5,11 @@ use fallible_iterator::FallibleIterator;
 use crate::{
     tokenize::{
         Keyword, Symbol,
-        TokenStream, Token,
+        TokenStream, Token, TokenData,
         TokenizerError,
     },
     ast::{
-        Atom, Expr,
+        Expr,
         Program, Statement,
     },
 };
@@ -56,20 +56,20 @@ impl Parser {
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         match self.peek()?.expect("a token") {
-            Token::Keyword(kwd) => match kwd {
+            Token { data: TokenData::Keyword(kwd), location } => match kwd {
                 Keyword::Exit => {
                     self.consume()?;
                     match self.consume()?.expect("a left parenthesis") {
-                        Token::Symbol(Symbol::LParen) => (),
+                        Token { data: TokenData::Symbol(Symbol::LParen), location: _ } => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     let value = self.parse_expression()?;
                     match self.consume()?.expect("a right parenthesis") {
-                        Token::Symbol(Symbol::RParen) => (),
+                        Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     match self.consume()?.expect("a semicolon") {
-                        Token::Symbol(Symbol::Semi) => (),
+                        Token { data: TokenData::Symbol(Symbol::Semi), location: _ } => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     Ok(Statement::Exit { value })
@@ -77,42 +77,22 @@ impl Parser {
                 Keyword::Let => {
                     self.consume()?;
                     let identifier = match self.consume()?.expect("an identifier") {
-                        Token::Identifier(identifier) => identifier,
+                        Token { data: TokenData::Identifier(identifier), location: _ } => identifier,
                         tok => return Err(ParseError::UnexpectedToken(tok)),
                     };
                     match self.consume()?.expect("an equals sign") {
-                        Token::Symbol(Symbol::Equals) => (),
+                        Token { data: TokenData::Symbol(Symbol::Equals), location: _ } => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     let value = self.parse_expression()?;
                     match self.consume()?.expect("a semicolon") {
-                        Token::Symbol(Symbol::Semi) => (),
+                        Token { data: TokenData::Symbol(Symbol::Semi), location: _ } => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     Ok(Statement::Let { identifier, value })
                 },
-                Keyword::If => {
-                    self.consume()?;
-                    match self.consume()?.expect("a left parenthesis") {
-                        Token::Symbol(Symbol::LParen) => (),
-                        tok => return Err(ParseError::UnexpectedToken(tok))
-                    };
-                    let check = self.parse_expression()?;
-                    match self.consume()?.expect("a right parenthesis") {
-                        Token::Symbol(Symbol::RParen) => (),
-                        tok => return Err(ParseError::UnexpectedToken(tok))
-                    };
-                    let body = Box::new(self.parse_statement()?);
-                    let els = match self.peek()? {
-                        Some(Token::Keyword(Keyword::Else)) => {
-                            self.consume()?;
-                            Some(Box::new(self.parse_statement()?))
-                        },
-                        Some(_) | None => None,
-                    };
-                    Ok(Statement::If { check, body, els })
-                },
-                kwd => Err(ParseError::UnexpectedToken(Token::Keyword(kwd))),
+                Keyword::If => Ok(Statement::Expr(self.parse_if()?)),
+                kwd => Err(ParseError::UnexpectedToken(Token { data: TokenData::Keyword(kwd), location })),
             },
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
@@ -120,16 +100,16 @@ impl Parser {
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.parse_expression_mul_part()?;
-        if let Some(tok) = self.peek()? {
-            match tok {
-                Token::Symbol(Symbol::Plus) => {
+        if let Some(Token { data, location: _ }) = self.peek()? {
+            match data {
+                TokenData::Symbol(Symbol::Plus) => {
                     self.consume()?;
                     expr = Expr::Add(
                         Box::new(expr),
                         Box::new(self.parse_expression_mul_part()?)
                     );
                 },
-                Token::Symbol(Symbol::Minus) => {
+                TokenData::Symbol(Symbol::Minus) => {
                     self.consume()?;
                     expr = Expr::Sub(
                         Box::new(expr),
@@ -143,28 +123,28 @@ impl Parser {
     }
 
     fn parse_expression_mul_part(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.parse_expression_atom_part()?;
-        if let Some(tok) = self.peek()? {
-            match tok {
-                Token::Symbol(Symbol::Star) => {
+        let mut expr = self.parse_atom()?;
+        if let Some(Token { data, location: _ }) = self.peek()? {
+            match data {
+                TokenData::Symbol(Symbol::Star) => {
                     self.consume()?;
                     expr = Expr::Mul(
                         Box::new(expr),
-                        Box::new(self.parse_expression_atom_part()?)
+                        Box::new(self.parse_atom()?)
                     );
                 },
-                Token::Symbol(Symbol::Slash) => {
+                TokenData::Symbol(Symbol::Slash) => {
                     self.consume()?;
                     expr = Expr::Div(
                         Box::new(expr),
-                        Box::new(self.parse_expression_atom_part()?)
+                        Box::new(self.parse_atom()?)
                     );
                 },
-                Token::Symbol(Symbol::Percent) => {
+                TokenData::Symbol(Symbol::Percent) => {
                     self.consume()?;
                     expr = Expr::Mod(
                         Box::new(expr),
-                        Box::new(self.parse_expression_atom_part()?)
+                        Box::new(self.parse_atom()?)
                     );
                 },
                 _ => (),
@@ -173,16 +153,35 @@ impl Parser {
         Ok(expr)
     }
 
-    fn parse_expression_atom_part(&mut self) -> Result<Expr, ParseError> {
-        self.parse_atom().map(Expr::Atom)
-    }
-
-    fn parse_atom(&mut self) -> Result<Atom, ParseError> {
+    fn parse_atom(&mut self) -> Result<Expr, ParseError> {
         match self.peek()?.expect("a token") {
-            Token::IntegerLiteral(lit) => { self.consume()?; Ok(Atom::IntegerLiteral(lit)) },
-            Token::Identifier(ident) => { self.consume()?; Ok(Atom::Identifier(ident)) }
+            Token { data: TokenData::IntegerLiteral(lit), location: _ } => { self.consume()?; Ok(Expr::IntegerLiteral(lit)) },
+            Token { data: TokenData::Identifier(ident), location: _ } => { self.consume()?; Ok(Expr::Identifier(ident)) }
+            Token { data: TokenData::Keyword(Keyword::If), location: _ } => self.parse_if(),
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
+    }
+
+    fn parse_if(&mut self) -> Result<Expr, ParseError> {
+        self.consume()?;
+        match self.consume()?.expect("a left parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::LParen), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok))
+        };
+        let check = Box::new(self.parse_expression()?);
+        match self.consume()?.expect("a right parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok))
+        };
+        let body = Box::new(self.parse_statement()?);
+        let els = match self.peek()? {
+            Some(Token { data: TokenData::Keyword(Keyword::Else), location: _ }) => {
+                self.consume()?;
+                Some(Box::new(self.parse_statement()?))
+            },
+            Some(_) | None => None,
+        };
+        Ok(Expr::If { check, body, els })
     }
 
     fn is_empty(&mut self) -> Result<bool, TokenizerError> {
