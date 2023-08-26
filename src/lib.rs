@@ -1,4 +1,5 @@
 mod ast;
+mod codegen;
 mod context;
 mod iter;
 mod parser;
@@ -70,9 +71,9 @@ pub fn compile(args: &CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
     let tree = parser.parse()?;
 
     println!("    codegen");
-    use crate::ast::Codegen;
+    use crate::codegen::x86::Codegen;
     let mut context = Context::new();
-    let generated_code = tree.codegen(&mut context)?;
+    let generated_code = tree.codegen_x86(&mut context)?;
 
     println!("    writing");
     let target_file = args.get_target_file();
