@@ -5,9 +5,7 @@ use crate::iter::Reversed;
 
 #[derive(Clone, Debug, Default)]
 pub struct VariableFrame {
-    stack_size: u64,
-    variables: HashMap<String, u64>,
-}
+    stack_size: u64, variables: HashMap<String, u64>, }
 
 impl VariableFrame {
     pub fn with_size(size: u64) -> Self {
@@ -76,8 +74,6 @@ impl Context {
     }
 
     pub fn push<S: Into<String>>(&mut self, value: S) -> String {
-        let value: String = value.into();
-        println!("        pushing `{value}`");
         self.stack_size += 1;
         match self.variables.peek() {
             Some(mut frame) => frame.stack_size += 1,
@@ -87,8 +83,6 @@ impl Context {
     }
 
     pub fn pop<S: Into<String>>(&mut self, value: S) -> String {
-        let value: String = value.into();
-        println!("        popping `{value}`");
         self.stack_size -= 1;
         self.variables.peek().expect("trying to pop from empty stack").stack_size -= 1;
         format!("    pop {}\n", Into::<String>::into(value))
@@ -100,9 +94,7 @@ impl Context {
 
     pub fn get_variable(&mut self, identifier: &String) -> Option<String> {
         self.variables.get_offset(identifier).map(|offset| {
-            println!("        getting `{identifier}` with base offset {offset}");
-            let offset = offset * 8;
-            self.push(format!("qword [rsp + {}]", offset))
+            self.push(format!("qword [rsp + {}]", offset * 8))
         })
     }
 
@@ -112,6 +104,16 @@ impl Context {
         let index = *entry;
         *entry += 1;
         format!("{tag}{index:08x}")
+    }
+
+    pub fn enter(&mut self) -> String {
+        self.variables.push(VariableFrame::default());
+        String::new()
+    }
+
+    pub fn exit(&mut self) -> String {
+        let frame = self.variables.pop().expect("trying to exit from base frame");
+        format!("    add rsp, {}\n", frame.stack_size * 8 + 8)
     }
 }
 

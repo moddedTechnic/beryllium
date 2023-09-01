@@ -106,11 +106,15 @@ impl Codegen for Expr {
                 code += context.pop("rax").as_str();
                 code += "    or rax, rax\n";
                 code += format!("    jz {else_label}\n").as_str();
+                code += context.enter().as_str();
                 code += body.codegen_x86(context)?.as_str();
+                code += context.exit().as_str();
                 code += format!("    jmp {endif_label}\n").as_str();
                 code += format!("{else_label}:\n").as_str();
                 if let Some(els) = els {
+                    code += context.enter().as_str();
                     code += els.codegen_x86(context)?.as_str();
+                    code += context.exit().as_str();
                 }
                 code += format!("{endif_label}:\n").as_str();
                 Ok(code)
