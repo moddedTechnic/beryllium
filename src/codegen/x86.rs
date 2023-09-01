@@ -93,6 +93,55 @@ impl Codegen for Expr {
                 Ok(code)
             },
 
+            Self::Equality(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code += "    mov rcx, 0\n";
+                code += "    cmp rax, rbx\n";
+                code += "    sete cl\n";
+                code += context.push("rcx").as_str();
+                Ok(code)
+            },
+            Self::NonEquality(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code += "    mov rcx, 0\n";
+                code += "    cmp rax, rbx\n";
+                code += "    setne cl\n";
+                code += context.push("rcx").as_str();
+                Ok(code)
+            },
+            Self::Less(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code += "    mov rcx, 0\n";
+                code += "    cmp rax, rbx\n";
+                code += "    setl cl\n";
+                code += context.push("rcx").as_str();
+                Ok(code)
+            },
+            Self::LessEq(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code += "    mov rcx, 0\n";
+                code += "    cmp rax, rbx\n";
+                code += "    setle cl\n";
+                code += context.push("rcx").as_str();
+                Ok(code)
+            },
+            Self::Greater(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code += "    mov rcx, 0\n";
+                code += "    cmp rax, rbx\n";
+                code += "    setg cl\n";
+                code += context.push("rcx").as_str();
+                Ok(code)
+            },
+            Self::GreaterEq(a, b) => {
+                let mut code = Self::prepare_binop_registers(context, *a, *b)?;
+                code += "    mov rcx, 0\n";
+                code += "    cmp rax, rbx\n";
+                code += "    setge cl\n";
+                code += context.push("rcx").as_str();
+                Ok(code)
+            },
+
             Self::IntegerLiteral(value) => Ok(context.push(value)),
             Self::Identifier(ident) => Ok(
                 context.get_variable(&ident)

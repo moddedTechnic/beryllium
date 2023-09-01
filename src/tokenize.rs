@@ -60,10 +60,13 @@ pub enum Keyword {
 pub enum Symbol {
     LParen, RParen,
     LBrace, RBrace,
+    LAngle, RAngle,
     Semi,
     Equals,
     Plus, Minus, Star,
     Slash, Percent,
+    Equality, NonEquality,
+    GreaterEqual, LesserEqual,
 }
 
 
@@ -152,7 +155,27 @@ impl TokenStream {
             ')' => Ok(Symbol::RParen),
             '{' => Ok(Symbol::LBrace),
             '}' => Ok(Symbol::RBrace),
-            '=' => Ok(Symbol::Equals),
+            '<' => match self.peek()
+                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+                '=' => { self.consume(); Ok(Symbol::LesserEqual) },
+                _ => Ok(Symbol::LAngle)
+            },
+            '>' => match self.peek()
+                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+                '=' => { self.consume(); Ok(Symbol::GreaterEqual) },
+                _ => Ok(Symbol::RAngle)
+            },
+
+            '!' => match self.peek()
+                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+                '=' => { self.consume(); Ok(Symbol::NonEquality) },
+                _ => Err(TokenizerError::UnrecognizedCharacter('!')),
+            }
+            '=' => match self.peek()
+                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+                '=' => { self.consume(); Ok(Symbol::Equality) },
+                _ => Ok(Symbol::Equals)
+            },
             ';' => Ok(Symbol::Semi),
 
             '+' => Ok(Symbol::Plus),
@@ -322,6 +345,27 @@ fn brackets_tokenize() {
         TokenData::Symbol(Symbol::RParen),
         TokenData::Symbol(Symbol::LBrace),
         TokenData::Symbol(Symbol::RBrace),
+    ];
+
+    assert_eq!(tokens.len(), expected_tokens.len());
+    for (token, expected_token) in tokens.into_iter().zip(expected_tokens) {
+        assert_eq!(token.data, expected_token);
+    }
+}
+
+#[test]
+fn comparison_operators_tokenize() {
+    let tokens: Result<Vec<_>, _> = "== != < <= > >=".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+
+    let expected_tokens = vec![
+        TokenData::Symbol(Symbol::Equality),
+        TokenData::Symbol(Symbol::NonEquality),
+        TokenData::Symbol(Symbol::LAngle),
+        TokenData::Symbol(Symbol::LesserEqual),
+        TokenData::Symbol(Symbol::RAngle),
+        TokenData::Symbol(Symbol::GreaterEqual),
     ];
 
     assert_eq!(tokens.len(), expected_tokens.len());

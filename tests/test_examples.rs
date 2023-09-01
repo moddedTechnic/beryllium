@@ -32,6 +32,22 @@ fn examples() {
         ("variable_scoping_multiple.be", 3),
         ("block.be", 3),
         ("block_if.be", 3),
+        ("comparison_equality_true.be", 0),
+        ("comparison_equality_false.be", 1),
+        ("comparison_nonequality_true.be", 0),
+        ("comparison_nonequality_false.be", 1),
+        ("comparison_lesser_true.be", 0),
+        ("comparison_lesser_false_eq.be", 1),
+        ("comparison_lesser_false.be", 1),
+        ("comparison_lesser_equal_true.be", 0),
+        ("comparison_lesser_equal_true_eq.be", 0),
+        ("comparison_lesser_equal_false.be", 1),
+        ("comparison_greater_true.be", 0),
+        ("comparison_greater_false_eq.be", 1),
+        ("comparison_greater_false.be", 1),
+        ("comparison_greater_equal_true.be", 0),
+        ("comparison_greater_equal_true_eq.be", 0),
+        ("comparison_greater_equal_false.be", 1),
     ]);
     let examples_dir = PathBuf::from("examples");
     let build_dir = PathBuf::from("examples/build");
