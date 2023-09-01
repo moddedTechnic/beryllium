@@ -91,9 +91,13 @@ impl Parser {
                     };
                     Ok(Statement::Let { identifier, value })
                 },
-                Keyword::If => Ok(Statement::Expr(self.parse_if()?)),
+                Keyword::If => self.parse_if().map(Statement::Expr),
                 kwd => Err(ParseError::UnexpectedToken(Token { data: TokenData::Keyword(kwd), location })),
             },
+            Token {
+                data: TokenData::Symbol(Symbol::LBrace),
+                location: _
+            } => self.parse_block().map(Statement::Expr),
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
     }
@@ -157,13 +161,33 @@ impl Parser {
         match self.peek()?.expect("a token") {
             Token { data: TokenData::IntegerLiteral(lit), location: _ } => { self.consume()?; Ok(Expr::IntegerLiteral(lit)) },
             Token { data: TokenData::Identifier(ident), location: _ } => { self.consume()?; Ok(Expr::Identifier(ident)) }
+
+            Token { data: TokenData::Symbol(Symbol::LBrace), location: _ } => self.parse_block(),
             Token { data: TokenData::Keyword(Keyword::If), location: _ } => self.parse_if(),
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
     }
 
+    fn parse_block(&mut self) -> Result<Expr, ParseError> {
+        match self.consume()?.expect("a left brace `{`") {
+            Token { data: TokenData::Symbol(Symbol::LBrace), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        };
+        let mut stmts = Vec::new();
+        loop {
+            match self.peek()?.expect("a statement or right brace `}`") {
+                Token { data: TokenData::Symbol(Symbol::RBrace), location: _ } => { self.consume()?; break },
+                _ => stmts.push(self.parse_statement()?),
+            }
+        };
+        Ok(Expr::Block(stmts))
+    }
+
     fn parse_if(&mut self) -> Result<Expr, ParseError> {
-        self.consume()?;
+        match self.consume()?.expect("keyword `if`") {
+            Token { data: TokenData::Keyword(Keyword::If), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        }
         match self.consume()?.expect("a left parenthesis") {
             Token { data: TokenData::Symbol(Symbol::LParen), location: _ } => (),
             tok => return Err(ParseError::UnexpectedToken(tok))

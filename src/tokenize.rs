@@ -59,6 +59,7 @@ pub enum Keyword {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Symbol {
     LParen, RParen,
+    LBrace, RBrace,
     Semi,
     Equals,
     Plus, Minus, Star,
@@ -147,9 +148,11 @@ impl TokenStream {
         let character = self.consume()
             .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))?;
         match character {
-            '=' => Ok(Symbol::Equals),
             '(' => Ok(Symbol::LParen),
             ')' => Ok(Symbol::RParen),
+            '{' => Ok(Symbol::LBrace),
+            '}' => Ok(Symbol::RBrace),
+            '=' => Ok(Symbol::Equals),
             ';' => Ok(Symbol::Semi),
 
             '+' => Ok(Symbol::Plus),
@@ -303,6 +306,25 @@ fn maths_expression_tokenizes() {
         TokenData::IntegerLiteral(String::from("6")),
     ];
 
+    for (token, expected_token) in tokens.into_iter().zip(expected_tokens) {
+        assert_eq!(token.data, expected_token);
+    }
+}
+
+#[test]
+fn brackets_tokenize() {
+    let tokens: Result<Vec<_>, _> = "( ) { }".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+
+    let expected_tokens = vec![
+        TokenData::Symbol(Symbol::LParen),
+        TokenData::Symbol(Symbol::RParen),
+        TokenData::Symbol(Symbol::LBrace),
+        TokenData::Symbol(Symbol::RBrace),
+    ];
+
+    assert_eq!(tokens.len(), expected_tokens.len());
     for (token, expected_token) in tokens.into_iter().zip(expected_tokens) {
         assert_eq!(token.data, expected_token);
     }
