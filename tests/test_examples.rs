@@ -28,6 +28,8 @@ fn examples() {
         ("if_simple_false.be", 0),
         ("if_else_true.be", 0),
         ("if_else_false.be", 1),
+        ("variable_scoping.be", 5),
+        ("variable_scoping_multiple.be", 3),
     ]);
     let examples_dir = PathBuf::from("examples");
     let build_dir = PathBuf::from("examples/build");
