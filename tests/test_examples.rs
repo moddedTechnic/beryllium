@@ -7,7 +7,7 @@ use std::{
 
 
 #[test]
-fn examples() {
+fn valid_examples() {
     let examples = HashMap::from([
         ("empty_program.be", 0),
         ("exit_failure.be", 20),
@@ -48,6 +48,7 @@ fn examples() {
         ("comparison_greater_equal_true.be", 0),
         ("comparison_greater_equal_true_eq.be", 0),
         ("comparison_greater_equal_false.be", 1),
+        ("variable_mutability_valid.be", 1),
     ]);
     let examples_dir = PathBuf::from("examples");
     let build_dir = PathBuf::from("examples/build");
@@ -74,5 +75,31 @@ fn examples() {
         assert_eq!(code.unwrap(), *expected_code);
         println!("    SUCCESS\n");
     }
+}
+
+
+#[test]
+fn invalid_variable_mutability_fails() {
+    let examples_dir = PathBuf::from("examples");
+    let build_dir = PathBuf::from("examples/build");
+    if !build_dir.exists() {
+        create_dir(&build_dir).expect("failed to create build dir");
+    }
+
+    let example = "variable_mutability_invalid.be";
+    let example_file = examples_dir.join(example);
+    let target_file = build_dir.join(example);
+    println!("{example}");
+    assert!(example_file.exists());
+    let compile_args = beryllium::CompileArgs {
+        source_file: example_file,
+        target_file: Some(target_file),
+    };
+    let compile_result = beryllium::compile(&compile_args);
+    println!("        {compile_result:?}");
+    assert!(compile_result.is_err());
+    let err = compile_result.unwrap_err();
+    assert!(matches!(err, beryllium::CompileError::ChangedImmutableVariable(_)));
+    println!("    SUCCESS\n");
 }
 

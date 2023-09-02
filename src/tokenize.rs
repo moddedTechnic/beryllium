@@ -26,11 +26,21 @@ impl Tokenize for Vec<char> {
 }
 
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Location {
     pub index: u64,
     pub line: u64,
     pub column: u64,
+}
+
+impl Default for Location {
+    fn default() -> Self {
+        Self {
+            index: 0,
+            line: 1,
+            column: 1,
+        }
+    }
 }
 
 
@@ -52,7 +62,7 @@ pub enum TokenData {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Keyword {
     Exit,
-    Let,
+    Let, Mut,
     If, Else,
 }
 
@@ -63,8 +73,8 @@ pub enum Symbol {
     LAngle, RAngle,
     Semi,
     Equals,
-    Plus, Minus, Star,
-    Slash, Percent,
+    Plus, Minus, Star, Slash, Percent,
+    PlusEq, MinusEq, StarEq, SlashEq, PercentEq,
     Equality, NonEquality,
     GreaterEqual, LesserEqual,
 }
@@ -105,7 +115,7 @@ impl TokenStream {
                 self.location.column += 1;
                 if char == '\n' {
                     self.location.line += 1;
-                    self.location.column = 0;
+                    self.location.column = 1;
                 }
                 Some(char)
             },
@@ -125,6 +135,7 @@ impl TokenStream {
         let data = match buffer.as_str() {
             "exit" => TokenData::Keyword(Keyword::Exit),
             "let"  => TokenData::Keyword(Keyword::Let),
+            "mut"  => TokenData::Keyword(Keyword::Mut),
             "if"   => TokenData::Keyword(Keyword::If),
             "else" => TokenData::Keyword(Keyword::Else),
             _ => TokenData::Identifier(buffer),
@@ -155,34 +166,45 @@ impl TokenStream {
             ')' => Ok(Symbol::RParen),
             '{' => Ok(Symbol::LBrace),
             '}' => Ok(Symbol::RBrace),
-            '<' => match self.peek()
-                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+            '<' => match self.peek().unwrap_or(0 as char) {
                 '=' => { self.consume(); Ok(Symbol::LesserEqual) },
                 _ => Ok(Symbol::LAngle)
             },
-            '>' => match self.peek()
-                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+            '>' => match self.peek().unwrap_or(0 as char) {
                 '=' => { self.consume(); Ok(Symbol::GreaterEqual) },
                 _ => Ok(Symbol::RAngle)
             },
 
-            '!' => match self.peek()
-                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+            '!' => match self.peek().unwrap_or(0 as char) {
                 '=' => { self.consume(); Ok(Symbol::NonEquality) },
                 _ => Err(TokenizerError::UnrecognizedCharacter('!')),
             }
-            '=' => match self.peek()
-                    .ok_or(TokenizerError::UnrecognizedCharacter(0 as char))? {
+            '=' => match self.peek().unwrap_or(0 as char) {
                 '=' => { self.consume(); Ok(Symbol::Equality) },
                 _ => Ok(Symbol::Equals)
             },
             ';' => Ok(Symbol::Semi),
 
-            '+' => Ok(Symbol::Plus),
-            '-' => Ok(Symbol::Minus),
-            '*' => Ok(Symbol::Star),
-            '/' => Ok(Symbol::Slash),
-            '%' => Ok(Symbol::Percent),
+            '+' => match self.peek().unwrap_or(0 as char) {
+                '=' => { self.consume(); Ok(Symbol::PlusEq) },
+                _ => Ok(Symbol::Plus),
+            }
+            '-' => match self.peek().unwrap_or(0 as char) {
+                '=' => { self.consume(); Ok(Symbol::MinusEq) },
+                _ => Ok(Symbol::Minus),
+            }
+            '*' => match self.peek().unwrap_or(0 as char) {
+                '=' => { self.consume(); Ok(Symbol::StarEq) },
+                _ => Ok(Symbol::Star),
+            }
+            '/' => match self.peek().unwrap_or(0 as char) {
+                '=' => { self.consume(); Ok(Symbol::SlashEq) },
+                _ => Ok(Symbol::Slash),
+            }
+            '%' => match self.peek().unwrap_or(0 as char) {
+                '=' => { self.consume(); Ok(Symbol::PercentEq) },
+                _ => Ok(Symbol::Percent),
+            }
             _ => Err(
                 TokenizerError::UnrecognizedCharacter(character)
             ),
@@ -299,6 +321,16 @@ fn keyword_let_tokenizes() {
 }
 
 #[test]
+fn keyword_mut_tokenizes() {
+    let tokens: Result<Vec<_>, _> = "mut".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+    assert_eq!(tokens.len(), 1);
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Keyword(Keyword::Mut));
+}
+
+#[test]
 fn keyword_if_tokenizes() {
     let tokens: Result<Vec<_>, _> = "if".tokenize().collect();
     assert!(tokens.is_ok());
@@ -306,6 +338,16 @@ fn keyword_if_tokenizes() {
     assert_eq!(tokens.len(), 1);
     let token = tokens.get(0).unwrap().clone().data;
     assert_eq!(token, TokenData::Keyword(Keyword::If));
+}
+
+#[test]
+fn keyword_else_tokenizes() {
+    let tokens: Result<Vec<_>, _> = "else".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+    assert_eq!(tokens.len(), 1);
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Keyword(Keyword::Else));
 }
 
 #[test]
@@ -371,6 +413,26 @@ fn comparison_operators_tokenize() {
     assert_eq!(tokens.len(), expected_tokens.len());
     for (token, expected_token) in tokens.into_iter().zip(expected_tokens) {
         assert_eq!(token.data, expected_token);
+    }
+}
+
+#[test]
+fn assignment_operators_tokenize() {
+    let tokens: Result<Vec<_>, _> = "+= -= *= /= %=".tokenize().collect();
+    assert!(tokens.is_ok(), "failed to tokenize");
+    let tokens = tokens.unwrap();
+
+    let expected_tokens = vec![
+        TokenData::Symbol(Symbol::PlusEq),
+        TokenData::Symbol(Symbol::MinusEq),
+        TokenData::Symbol(Symbol::StarEq),
+        TokenData::Symbol(Symbol::SlashEq),
+        TokenData::Symbol(Symbol::PercentEq),
+    ];
+
+    assert_eq!(tokens.len(), expected_tokens.len(), "the wrong number of tokens was parsed");
+    for (token, expected_token) in tokens.into_iter().zip(expected_tokens) {
+        assert_eq!(token.data, expected_token, "tokens did not match expected");
     }
 }
 

@@ -38,9 +38,9 @@ impl Codegen for Statement {
                 Ok(code)
             },
             Self::Expr(value) => value.codegen_x86(context),
-            Self::Let { identifier, value } => {
+            Self::Let { identifier, value, is_mutable } => {
                 let code = value.codegen_x86(context);
-                context.declare_variable(identifier);
+                context.declare_variable(identifier, is_mutable);
                 code
             },
         }
@@ -90,6 +90,72 @@ impl Codegen for Expr {
                 let mut code = Self::prepare_binop_registers(context, *a, *b)?;
                 code.push_str("    div rbx\n");
                 code.push_str(context.push("rdx").as_str());
+                Ok(code)
+            },
+
+            Self::AddAssign { identifier, value } => {
+                let mut code = String::new();
+                code += value.codegen_x86(context)?.as_str();
+                code += context.get_variable(&identifier)
+                    .ok_or(CodegenError::IdentifierNotDeclared(identifier.clone()))?
+                    .as_str();
+                code += context.pop("rax").as_str();
+                code += context.pop("rbx").as_str();
+                code += "    add rax, rbx\n";
+                code += context.set_variable(&identifier, "rax")?
+                    .as_str();
+                Ok(code)
+            },
+            Self::SubAssign { identifier, value } => {
+                let mut code = String::new();
+                code += value.codegen_x86(context)?.as_str();
+                code += context.get_variable(&identifier)
+                    .ok_or(CodegenError::IdentifierNotDeclared(identifier.clone()))?
+                    .as_str();
+                code += context.pop("rax").as_str();
+                code += context.pop("rbx").as_str();
+                code += "    sub rax, rbx\n";
+                code += context.set_variable(&identifier, "rax")?
+                    .as_str();
+                Ok(code)
+            },
+            Self::MulAssign { identifier, value } => {
+                let mut code = String::new();
+                code += value.codegen_x86(context)?.as_str();
+                code += context.get_variable(&identifier)
+                    .ok_or(CodegenError::IdentifierNotDeclared(identifier.clone()))?
+                    .as_str();
+                code += context.pop("rax").as_str();
+                code += context.pop("rbx").as_str();
+                code += "    mul rbx\n";
+                code += context.set_variable(&identifier, "rax")?
+                    .as_str();
+                Ok(code)
+            },
+            Self::DivAssign { identifier, value } => {
+                let mut code = String::new();
+                code += value.codegen_x86(context)?.as_str();
+                code += context.get_variable(&identifier)
+                    .ok_or(CodegenError::IdentifierNotDeclared(identifier.clone()))?
+                    .as_str();
+                code += context.pop("rax").as_str();
+                code += context.pop("rbx").as_str();
+                code += "    div rbx\n";
+                code += context.set_variable(&identifier, "rax")?
+                    .as_str();
+                Ok(code)
+            },
+            Self::ModAssign { identifier, value } => {
+                let mut code = String::new();
+                code += value.codegen_x86(context)?.as_str();
+                code += context.get_variable(&identifier)
+                    .ok_or(CodegenError::IdentifierNotDeclared(identifier.clone()))?
+                    .as_str();
+                code += context.pop("rax").as_str();
+                code += context.pop("rbx").as_str();
+                code += "    div rbx\n";
+                code += context.set_variable(&identifier, "rdx")?
+                    .as_str();
                 Ok(code)
             },
 

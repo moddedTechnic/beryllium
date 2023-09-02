@@ -1,11 +1,20 @@
 use std::collections::HashMap;
 
-use crate::iter::Reversed;
+use crate::{iter::Reversed, codegen::CodegenError};
+
+
+#[derive(Clone, Debug, Default)]
+pub struct VariableMeta {
+    stack_frame_offset: u64,
+    is_mutable: bool,
+}
 
 
 #[derive(Clone, Debug, Default)]
 pub struct VariableFrame {
-    stack_size: u64, variables: HashMap<String, u64>, }
+    stack_size: u64,
+    variables: HashMap<String, VariableMeta>,
+}
 
 impl VariableFrame {
     pub fn with_size(size: u64) -> Self {
@@ -37,19 +46,33 @@ impl VariableStack {
         self.0.get_mut(0)
     }
 
-    pub fn declare_variable(&mut self, name: String) {
+    pub fn declare_variable(&mut self, name: String, is_mutable: bool) {
         match self.peek() {
             Some(frame) => Some(frame),
             None => Some(self.push(VariableFrame::default())),
-        }.map(|frame| frame.variables.insert(name, frame.stack_size));
+        }.map(|frame|
+            frame.variables.insert(
+                name,
+                VariableMeta { stack_frame_offset: frame.stack_size, is_mutable },
+            )
+        );
     }
 
     pub fn get_offset(&mut self, name: &String) -> Option<u64> {
         let mut offset = 0;
         for frame in self.0.reversed() {
             match frame.variables.get(name) {
-                Some(off) => return Some(frame.stack_size - off + offset),
+                Some(meta) => return Some(frame.stack_size - meta.stack_frame_offset + offset),
                 None => offset += frame.stack_size,
+            }
+        };
+        None
+    }
+
+    pub fn is_mutable(&mut self, name: &String) -> Option<bool> {
+        for frame in self.0.reversed() {
+            if let Some(meta) = frame.variables.get(name) {
+                return Some(meta.is_mutable)
             }
         };
         None
@@ -88,14 +111,26 @@ impl Context {
         format!("    pop {}\n", Into::<String>::into(value))
     }
 
-    pub fn declare_variable(&mut self, identifier: String) {
-        self.variables.declare_variable(identifier)
+    pub fn declare_variable(&mut self, identifier: String, is_mutable: bool) {
+        self.variables.declare_variable(identifier, is_mutable)
     }
 
     pub fn get_variable(&mut self, identifier: &String) -> Option<String> {
         self.variables.get_offset(identifier).map(|offset| {
             self.push(format!("qword [rsp + {}]", offset * 8))
         })
+    }
+
+    pub fn set_variable(&mut self, identifier: &String, value: impl Into<String>) -> Result<String, CodegenError> {
+        if !self.variables.is_mutable(identifier)
+                .ok_or(CodegenError::IdentifierNotDeclared(identifier.clone()))? {
+            return Err(CodegenError::ChangedImmutableVariable(identifier.clone()));
+        }
+        self.variables.get_offset(identifier)
+            .ok_or(CodegenError::IdentifierNotDeclared(identifier.clone()))
+            .map(|offset| {
+                format!("    mov qword [rsp + {}], {}\n", offset * 8, Into::<String>::into(value))
+            })
     }
 
     pub fn create_label<S: Into<String>>(&mut self, tag: S) -> String {

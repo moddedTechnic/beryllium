@@ -76,6 +76,13 @@ impl Parser {
                 },
                 Keyword::Let => {
                     self.consume()?;
+                    let is_mutable = match self.peek()?.expect("an identifier or `mut`") {
+                        Token { data: TokenData::Keyword(Keyword::Mut), location: _ } => {
+                            self.consume()?;
+                            true
+                        },
+                        _ => false,
+                    };
                     let identifier = match self.consume()?.expect("an identifier") {
                         Token { data: TokenData::Identifier(identifier), location: _ } => identifier,
                         tok => return Err(ParseError::UnexpectedToken(tok)),
@@ -89,21 +96,84 @@ impl Parser {
                         Token { data: TokenData::Symbol(Symbol::Semi), location: _ } => (),
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
-                    Ok(Statement::Let { identifier, value })
+                    Ok(Statement::Let { identifier, value, is_mutable })
                 },
                 Keyword::If => self.parse_if().map(Statement::Expr),
                 kwd => Err(ParseError::UnexpectedToken(Token { data: TokenData::Keyword(kwd), location })),
             },
             Token {
                 data: TokenData::Symbol(Symbol::LBrace),
-                location: _
+                location: _,
             } => self.parse_block().map(Statement::Expr),
-            tok => Err(ParseError::UnexpectedToken(tok)),
+            _ => {
+                let expr = self.parse_expression()?;
+                match self.consume()?.expect("a semicolon `;`") {
+                    Token {
+                        data: TokenData::Symbol(Symbol::Semi),
+                        location: _
+                    } => Ok(Statement::Expr(expr)),
+                    tok => Err(ParseError::UnexpectedToken(tok)),
+                }
+            },
         }
     }
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
-        self.parse_expression_cmp_part()
+        self.parse_assign_expr()
+    }
+
+    fn parse_assign_expr(&mut self) -> Result<Expr, ParseError> {
+        let identifier = match self.peek()?.expect("a token") {
+            Token { data: TokenData::Identifier(ident), location: _ } => ident,
+            _ => return self.parse_expression_cmp_part(),
+        };
+        let symbol = match self.peek_ahead(1)?.expect("an operator") {
+            Token { data:TokenData::Symbol(symbol), location: _ } => symbol,
+            _ => return self.parse_expression_cmp_part(),
+        };
+        match symbol {
+            Symbol::PlusEq => {
+                self.consume()?;
+                self.consume()?;
+                Ok(Expr::AddAssign {
+                    identifier,
+                    value: Box::new(self.parse_expression()?),
+                })
+            },
+            Symbol::MinusEq => {
+                self.consume()?;
+                self.consume()?;
+                Ok(Expr::SubAssign {
+                    identifier,
+                    value: Box::new(self.parse_expression()?),
+                })
+            },
+            Symbol::StarEq => {
+                self.consume()?;
+                self.consume()?;
+                Ok(Expr::MulAssign {
+                    identifier,
+                    value: Box::new(self.parse_expression()?),
+                })
+            },
+            Symbol::SlashEq => {
+                self.consume()?;
+                self.consume()?;
+                Ok(Expr::DivAssign {
+                    identifier,
+                    value: Box::new(self.parse_expression()?),
+                })
+            },
+            Symbol::PercentEq => {
+                self.consume()?;
+                self.consume()?;
+                Ok(Expr::ModAssign {
+                    identifier,
+                    value: Box::new(self.parse_expression()?),
+                })
+            },
+            _ => self.parse_expression_cmp_part(),
+        }
     }
 
     fn parse_expression_cmp_part(&mut self) -> Result<Expr, ParseError> {
@@ -269,13 +339,18 @@ impl Parser {
     }
 
     fn peek(&mut self) -> Result<Option<Token>, TokenizerError> {
-        if self.buffer.is_empty() {
+        self.peek_ahead(0)
+    }
+
+    fn peek_ahead(&mut self, count: usize) -> Result<Option<Token>, TokenizerError> {
+        while self.buffer.len() < count + 1 {
             match self.tokens.next()? {
                 Some(token) => self.buffer.push_back(token),
                 None => return Ok(None),
             };
         };
-        Ok(self.buffer.get(0).cloned())
+        Ok(self.buffer.get(count).cloned())
+
     }
 
     fn consume(&mut self) -> Result<Option<Token>, TokenizerError> {
