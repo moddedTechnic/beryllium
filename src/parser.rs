@@ -103,6 +103,62 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+        self.parse_expression_cmp_part()
+    }
+
+    fn parse_expression_cmp_part(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_expression_add_part()?;
+        if let Some(Token { data, location: _ }) = self.peek()? {
+            match data {
+                TokenData::Symbol(Symbol::Equality) => {
+                    self.consume()?;
+                    expr = Expr::Equality(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_add_part()?)
+                    );
+                },
+                TokenData::Symbol(Symbol::NonEquality) => {
+                    self.consume()?;
+                    expr = Expr::NonEquality(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_add_part()?)
+                    );
+                },
+                TokenData::Symbol(Symbol::LAngle) => {
+                    self.consume()?;
+                    expr = Expr::Less(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_add_part()?)
+                    );
+                },
+                TokenData::Symbol(Symbol::LesserEqual) => {
+                    self.consume()?;
+                    expr = Expr::LessEq(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_add_part()?)
+                    );
+                },
+                TokenData::Symbol(Symbol::RAngle) => {
+                    self.consume()?;
+                    expr = Expr::Greater(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_add_part()?)
+                    );
+                },
+                TokenData::Symbol(Symbol::GreaterEqual) => {
+                    self.consume()?;
+                    expr = Expr::GreaterEq(
+                        Box::new(expr),
+                        Box::new(self.parse_expression_add_part()?)
+                    );
+                },
+                _ => (),
+            }
+        }
+        Ok(expr)
+    }
+
+    fn parse_expression_add_part(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.parse_expression_mul_part()?;
         if let Some(Token { data, location: _ }) = self.peek()? {
             match data {
