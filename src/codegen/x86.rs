@@ -98,6 +98,18 @@ impl Codegen for Expr {
                 context.get_variable(&ident)
                     .ok_or(CodegenError::IdentifierNotDeclared(ident))?
             ),
+
+            Self::Block(stmts) => {
+                let mut code = context.enter();
+                code += stmts
+                    .into_iter()
+                    .map(|stmt| stmt.codegen_x86(context))
+                    .reduce(|a, b| Ok(a? + &b?))
+                    .unwrap_or(Ok(String::new()))?
+                    .as_str();
+                code += context.exit().as_str();
+                Ok(code)
+            }
             Self::If { check, body, els } => {
                 let else_label = context.create_label("else");
                 let endif_label = context.create_label("endif");

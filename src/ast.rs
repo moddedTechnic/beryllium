@@ -21,6 +21,8 @@ pub enum Expr {
 
     IntegerLiteral(String),
     Identifier(String),
+
+    Block(Vec<Statement>),
     If { check: Box<Expr>, body: Box<Statement>, els: Option<Box<Statement>> },
 }
 
