@@ -76,7 +76,7 @@ impl Context {
     pub fn push<S: Into<String>>(&mut self, value: S) -> String {
         self.stack_size += 1;
         match self.variables.peek() {
-            Some(mut frame) => frame.stack_size += 1,
+            Some(frame) => frame.stack_size += 1,
             None => { self.variables.push(VariableFrame::with_size(1)); },
         }
         format!("    push {}\n", Into::<String>::into(value))
