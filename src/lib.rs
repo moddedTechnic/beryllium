@@ -11,15 +11,19 @@ use std::{
     path::PathBuf,
 };
 
+use codegen::CodegenError;
+use parser::ParseError;
+use tokenize::{Token, TokenizerError};
+
 use crate::context::Context;
 
 
 trait RunCommand {
-    fn run(&mut self) -> Result<(), Box<dyn std::error::Error>>;
+    fn run(&mut self) -> Result<(), CompileError>;
 }
 
 impl RunCommand for std::process::Command {
-    fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    fn run(&mut self) -> Result<(), CompileError> {
         let output = self.output()?;
         if !output.status.success() {
             eprintln!("assembly failed with code {}", output.status);
@@ -48,7 +52,64 @@ impl CompileArgs {
 }
 
 
-pub fn compile(args: &CompileArgs) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Debug)]
+pub enum CompileError {
+    IdentifierNotDeclared(String),
+    ChangedImmutableVariable(String),
+    UnexpectedToken(Token),
+    UnrecognizedCharacter(char),
+    IOError(std::io::Error),
+    FromUtf8Error(std::string::FromUtf8Error),
+}
+
+impl std::fmt::Display for CompileError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{self:?}")
+    }
+}
+
+impl std::error::Error for CompileError {}
+
+impl From<CodegenError> for CompileError {
+    fn from(value: CodegenError) -> Self {
+        match value {
+            CodegenError::IdentifierNotDeclared(ident) => Self::IdentifierNotDeclared(ident),
+            CodegenError::ChangedImmutableVariable(ident) => Self::ChangedImmutableVariable(ident),
+        }
+    }
+}
+
+impl From<ParseError> for CompileError {
+    fn from(value: ParseError) -> Self {
+        match value {
+            ParseError::UnexpectedToken(tok) => Self::UnexpectedToken(tok),
+            ParseError::TokenizerError(err) => err.into(),
+        }
+    }
+}
+
+impl From<TokenizerError> for CompileError {
+    fn from(value: TokenizerError) -> Self {
+        match value {
+            TokenizerError::UnrecognizedCharacter(c) => Self::UnrecognizedCharacter(c),
+        }
+    }
+}
+
+impl From<std::io::Error> for CompileError {
+    fn from(value: std::io::Error) -> Self {
+        CompileError::IOError(value)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for CompileError {
+    fn from(value: std::string::FromUtf8Error) -> Self {
+        CompileError::FromUtf8Error(value)
+    }
+}
+
+
+pub fn compile(args: &CompileArgs) -> Result<(), CompileError> {
     use crate::{
         parser::Parser,
         tokenize::Tokenize,

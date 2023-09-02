@@ -4,6 +4,7 @@ pub mod x86;
 #[derive(Clone, Debug)]
 pub enum CodegenError {
     IdentifierNotDeclared(String),
+    ChangedImmutableVariable(String),
 }
 
 impl std::fmt::Display for CodegenError {
