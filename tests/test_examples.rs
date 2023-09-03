@@ -49,6 +49,7 @@ fn valid_examples() {
         ("comparison_greater_equal_true_eq.be", 0),
         ("comparison_greater_equal_false.be", 1),
         ("variable_mutability_valid.be", 1),
+        ("while.be", 10),
     ]);
     let examples_dir = PathBuf::from("examples");
     let build_dir = PathBuf::from("examples/build");
