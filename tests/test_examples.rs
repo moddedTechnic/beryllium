@@ -1,9 +1,3 @@
-use std::{
-    fs::create_dir,
-    path::PathBuf,
-    process::Command,
-};
-
 
 macro_rules! valid_example {
     ($name:ident, $exit_code:tt) => {
@@ -69,46 +63,55 @@ macro_rules! invalid_example {
 
 
 
-valid_example!(empty_program, 0);
-valid_example!(exit_failure, 20);
-valid_example!(exit_simple, 0);
-valid_example!(exit_variable, 20);
-valid_example!(let_simple, 0);
-valid_example!(let_variable_value, 10);
-valid_example!(maths_add_simple, 3);
-valid_example!(maths_add_variables, 6);
-valid_example!(maths_div_remainder, 5);
-valid_example!(maths_div_simple, 5);
-valid_example!(maths_mod_simple, 0);
-valid_example!(maths_mul_simple, 6);
-valid_example!(maths_mul_variables, 8);
-valid_example!(maths_sub_simple, 1);
-valid_example!(maths_sub_variables, 2);
-valid_example!(if_simple_true, 1);
-valid_example!(if_simple_false, 0);
-valid_example!(if_else_true, 0);
-valid_example!(if_else_false, 1);
-valid_example!(variable_scoping, 5);
-valid_example!(variable_scoping_multiple, 3);
-valid_example!(block, 3);
-valid_example!(block_if, 3);
-valid_example!(comparison_equality_true, 0);
-valid_example!(comparison_equality_false, 1);
-valid_example!(comparison_nonequality_true, 0);
-valid_example!(comparison_nonequality_false, 1);
-valid_example!(comparison_lesser_true, 0);
-valid_example!(comparison_lesser_false_eq, 1);
-valid_example!(comparison_lesser_false, 1);
-valid_example!(comparison_lesser_equal_true, 0);
-valid_example!(comparison_lesser_equal_true_eq, 0);
-valid_example!(comparison_lesser_equal_false, 1);
-valid_example!(comparison_greater_true, 0);
-valid_example!(comparison_greater_false_eq, 1);
-valid_example!(comparison_greater_false, 1);
-valid_example!(comparison_greater_equal_true, 0);
-valid_example!(comparison_greater_equal_true_eq, 0);
-valid_example!(comparison_greater_equal_false, 1);
-valid_example!(variable_mutability_valid, 1);
+mod example {
+    use std::{
+        fs::create_dir,
+        path::PathBuf,
+        process::Command,
+    };
 
-invalid_example!(variable_mutability_invalid, beryllium::CompileError::ChangedImmutableVariable(_));
+    valid_example!(empty_program, 0);
+    valid_example!(exit_failure, 20);
+    valid_example!(exit_simple, 0);
+    valid_example!(exit_variable, 20);
+    valid_example!(let_simple, 0);
+    valid_example!(let_variable_value, 10);
+    valid_example!(maths_add_simple, 3);
+    valid_example!(maths_add_variables, 6);
+    valid_example!(maths_div_remainder, 5);
+    valid_example!(maths_div_simple, 5);
+    valid_example!(maths_mod_simple, 0);
+    valid_example!(maths_mul_simple, 6);
+    valid_example!(maths_mul_variables, 8);
+    valid_example!(maths_sub_simple, 1);
+    valid_example!(maths_sub_variables, 2);
+    valid_example!(if_simple_true, 1);
+    valid_example!(if_simple_false, 0);
+    valid_example!(if_else_true, 0);
+    valid_example!(if_else_false, 1);
+    valid_example!(variable_scoping, 5);
+    valid_example!(variable_scoping_multiple, 3);
+    valid_example!(block, 3);
+    valid_example!(block_if, 3);
+    valid_example!(comparison_equality_true, 0);
+    valid_example!(comparison_equality_false, 1);
+    valid_example!(comparison_nonequality_true, 0);
+    valid_example!(comparison_nonequality_false, 1);
+    valid_example!(comparison_lesser_true, 0);
+    valid_example!(comparison_lesser_false_eq, 1);
+    valid_example!(comparison_lesser_false, 1);
+    valid_example!(comparison_lesser_equal_true, 0);
+    valid_example!(comparison_lesser_equal_true_eq, 0);
+    valid_example!(comparison_lesser_equal_false, 1);
+    valid_example!(comparison_greater_true, 0);
+    valid_example!(comparison_greater_false_eq, 1);
+    valid_example!(comparison_greater_false, 1);
+    valid_example!(comparison_greater_equal_true, 0);
+    valid_example!(comparison_greater_equal_true_eq, 0);
+    valid_example!(comparison_greater_equal_false, 1);
+    valid_example!(variable_mutability_valid, 1);
+    valid_example!(iteration_while, 10);
+
+    invalid_example!(variable_mutability_invalid, beryllium::CompileError::ChangedImmutableVariable(_));
+}
 
