@@ -12,7 +12,12 @@ macro_rules! valid_example {
             let examples_dir = PathBuf::from("examples");
             let build_dir = PathBuf::from("examples/build");
             if !build_dir.exists() {
-                create_dir(&build_dir).expect("failed to create build dir");
+                match create_dir(&build_dir) {
+                    Ok(_) => (),
+                    Err(err) => if !matches!(err.kind(), std::io::ErrorKind::AlreadyExists) {
+                        Result::<(), std::io::Error>::Err(err).unwrap()
+                    }
+                }
             }
 
             let example = stringify!($name.be);
