@@ -84,6 +84,7 @@ valid_example!(maths_mod_simple, 0);
 valid_example!(maths_mul_simple, 6);
 valid_example!(maths_mul_variables, 8);
 valid_example!(maths_sub_simple, 1);
+valid_example!(maths_sub_three_way, 0);
 valid_example!(maths_sub_variables, 2);
 valid_example!(if_simple_true, 1);
 valid_example!(if_simple_false, 0);
