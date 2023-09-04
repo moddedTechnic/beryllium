@@ -76,6 +76,7 @@ valid_example!(exit_variable, 20);
 valid_example!(let_simple, 0);
 valid_example!(let_variable_value, 10);
 valid_example!(maths_add_simple, 3);
+valid_example!(maths_add_three_way, 6);
 valid_example!(maths_add_variables, 6);
 valid_example!(maths_div_remainder, 5);
 valid_example!(maths_div_simple, 5);

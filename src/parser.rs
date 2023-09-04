@@ -236,14 +236,14 @@ impl Parser {
                     self.consume()?;
                     expr = Expr::Add(
                         Box::new(expr),
-                        Box::new(self.parse_expression_mul_part()?)
+                        Box::new(self.parse_expression_add_part()?)
                     );
                 },
                 TokenData::Symbol(Symbol::Minus) => {
                     self.consume()?;
                     expr = Expr::Sub(
                         Box::new(expr),
-                        Box::new(self.parse_expression_mul_part()?)
+                        Box::new(self.parse_expression_add_part()?)
                     );
                 },
                 _ => (),
@@ -260,21 +260,21 @@ impl Parser {
                     self.consume()?;
                     expr = Expr::Mul(
                         Box::new(expr),
-                        Box::new(self.parse_atom()?)
+                        Box::new(self.parse_expression_mul_part()?)
                     );
                 },
                 TokenData::Symbol(Symbol::Slash) => {
                     self.consume()?;
                     expr = Expr::Div(
                         Box::new(expr),
-                        Box::new(self.parse_atom()?)
+                        Box::new(self.parse_expression_mul_part()?)
                     );
                 },
                 TokenData::Symbol(Symbol::Percent) => {
                     self.consume()?;
                     expr = Expr::Mod(
                         Box::new(expr),
-                        Box::new(self.parse_atom()?)
+                        Box::new(self.parse_expression_mul_part()?)
                     );
                 },
                 _ => (),
