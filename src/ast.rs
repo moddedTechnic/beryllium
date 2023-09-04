@@ -39,3 +39,17 @@ pub enum Expr {
     If { check: Box<Expr>, body: Box<Statement>, els: Option<Box<Statement>> },
 }
 
+impl Expr {
+    pub fn map_left<F: Fn(Box<Expr>) -> Expr>(self, func: F) -> Self {
+        match self {
+            Self::Add(a, b) => Self::Add(Box::new(func(a)), b),
+            Self::Sub(a, b) => Self::Sub(Box::new(func(a)), b),
+            Self::Mul(a, b) => Self::Mul(Box::new(func(a)), b),
+            Self::Div(a, b) => Self::Div(Box::new(func(a)), b),
+            Self::Mod(a, b) => Self::Mod(Box::new(func(a)), b),
+
+            s => panic!("Cannot map_left for {s:?}"),
+        }
+    }
+}
+
