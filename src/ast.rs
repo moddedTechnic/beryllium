@@ -37,5 +37,6 @@ pub enum Expr {
 
     Block(Vec<Statement>),
     If { check: Box<Expr>, body: Box<Statement>, els: Option<Box<Statement>> },
+    While { check: Box<Expr>, body: Box<Statement> },
 }
 

@@ -246,6 +246,15 @@ impl Codegen for Expr {
                 code += format!("{endif_label}:\n").as_str();
                 Ok(code)
             },
+            Self::While { check, body } => {
+                let while_label = context.create_label("while");
+                let endwhile_label = context.create_label("endwhile");
+
+                let mut code = check.codegen_x86(context)?;
+                code += context.pop("rax").as_str();
+                code += "    or rax, rax\n";
+                code += format!("    jnz {endwhile_label}").as_str();
+            }
         }
     }
 }
