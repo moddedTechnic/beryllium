@@ -64,6 +64,7 @@ pub enum Keyword {
     Exit,
     Let, Mut,
     If, Else,
+    While,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -133,11 +134,12 @@ impl TokenStream {
             buffer.push(self.consume().unwrap());
         };
         let data = match buffer.as_str() {
-            "exit" => TokenData::Keyword(Keyword::Exit),
-            "let"  => TokenData::Keyword(Keyword::Let),
-            "mut"  => TokenData::Keyword(Keyword::Mut),
-            "if"   => TokenData::Keyword(Keyword::If),
-            "else" => TokenData::Keyword(Keyword::Else),
+            "exit"  => TokenData::Keyword(Keyword::Exit),
+            "let"   => TokenData::Keyword(Keyword::Let),
+            "mut"   => TokenData::Keyword(Keyword::Mut),
+            "if"    => TokenData::Keyword(Keyword::If),
+            "else"  => TokenData::Keyword(Keyword::Else),
+            "while" => TokenData::Keyword(Keyword::While),
             _ => TokenData::Identifier(buffer),
         };
         Token { data, location }
@@ -348,6 +350,16 @@ fn keyword_else_tokenizes() {
     assert_eq!(tokens.len(), 1);
     let token = tokens.get(0).unwrap().clone().data;
     assert_eq!(token, TokenData::Keyword(Keyword::Else));
+}
+
+#[test]
+fn keyword_while_tokenizes() {
+    let tokens: Result<Vec<_>, _> = "while".tokenize().collect();
+    assert!(tokens.is_ok());
+    let tokens = tokens.unwrap();
+    assert_eq!(tokens.len(), 1);
+    let token = tokens.get(0).unwrap().clone().data;
+    assert_eq!(token, TokenData::Keyword(Keyword::While));
 }
 
 #[test]
