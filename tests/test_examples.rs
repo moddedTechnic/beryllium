@@ -6,7 +6,12 @@ macro_rules! valid_example {
             let examples_dir = PathBuf::from("examples");
             let build_dir = PathBuf::from("examples/build");
             if !build_dir.exists() {
-                create_dir(&build_dir).expect("failed to create build dir");
+                match create_dir(&build_dir) {
+                    Ok(_) => (),
+                    Err(err) => if !matches!(err.kind(), std::io::ErrorKind::AlreadyExists) {
+                        Result::<(), std::io::Error>::Err(err).unwrap()
+                    }
+                }
             }
 
             let example = stringify!($name.be);
@@ -77,6 +82,7 @@ mod example {
     valid_example!(let_simple, 0);
     valid_example!(let_variable_value, 10);
     valid_example!(maths_add_simple, 3);
+    valid_example!(maths_add_three_way, 6);
     valid_example!(maths_add_variables, 6);
     valid_example!(maths_div_remainder, 5);
     valid_example!(maths_div_simple, 5);
@@ -84,6 +90,7 @@ mod example {
     valid_example!(maths_mul_simple, 6);
     valid_example!(maths_mul_variables, 8);
     valid_example!(maths_sub_simple, 1);
+    valid_example!(maths_sub_three_way, 0);
     valid_example!(maths_sub_variables, 2);
     valid_example!(if_simple_true, 1);
     valid_example!(if_simple_false, 0);
