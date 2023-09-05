@@ -118,6 +118,7 @@ mod example {
     valid_example!(comparison_greater_equal_false, 1);
     valid_example!(variable_mutability_valid, 1);
     valid_example!(iteration_while, 10);
+    valid_example!(iteration_loop, 10);
 
     invalid_example!(variable_mutability_invalid, beryllium::CompileError::ChangedImmutableVariable(_));
 }

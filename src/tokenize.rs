@@ -64,7 +64,8 @@ pub enum Keyword {
     Exit,
     Let, Mut,
     If, Else,
-    While,
+    Loop, While,
+    Break, Continue,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -134,12 +135,20 @@ impl TokenStream {
             buffer.push(self.consume().unwrap());
         };
         let data = match buffer.as_str() {
-            "exit"  => TokenData::Keyword(Keyword::Exit),
-            "let"   => TokenData::Keyword(Keyword::Let),
-            "mut"   => TokenData::Keyword(Keyword::Mut),
-            "if"    => TokenData::Keyword(Keyword::If),
-            "else"  => TokenData::Keyword(Keyword::Else),
+            "exit" => TokenData::Keyword(Keyword::Exit),
+
+            "let" => TokenData::Keyword(Keyword::Let),
+            "mut" => TokenData::Keyword(Keyword::Mut),
+
+            "if"   => TokenData::Keyword(Keyword::If),
+            "else" => TokenData::Keyword(Keyword::Else),
+
+            "loop"  => TokenData::Keyword(Keyword::Loop),
             "while" => TokenData::Keyword(Keyword::While),
+
+            "break"    => TokenData::Keyword(Keyword::Break),
+            "continue" => TokenData::Keyword(Keyword::Continue),
+
             _ => TokenData::Identifier(buffer),
         };
         Token { data, location }
@@ -246,6 +255,22 @@ impl FallibleIterator for TokenStream {
 /*                                                      */
 /********************************************************/
 
+macro_rules! test_keyword_tokenizes {
+    ($kwd:ident) => {
+        #[test]
+        #[allow(non_snake_case)]
+        fn $kwd() {
+            use crate::tokenize::*;
+            let tokens: Result<Vec<_>, _> = stringify!($kwd).to_lowercase().tokenize().collect();
+            assert!(tokens.is_ok());
+            let tokens = tokens.unwrap();
+            assert_eq!(tokens.len(), 1);
+            let token = tokens.get(0).unwrap().clone().data;
+            assert_eq!(token, TokenData::Keyword(Keyword::$kwd));
+        }
+    };
+}
+
 
 #[test]
 fn integer_literal_tokenizes() {
@@ -302,64 +327,20 @@ fn many_identifiers_tokenize() {
     assert_eq!(token, TokenData::Identifier("foo".into()));
 }
 
-#[test]
-fn keyword_exit_tokenizes() {
-    let tokens: Result<Vec<_>, _> = "exit".tokenize().collect();
-    assert!(tokens.is_ok());
-    let tokens = tokens.unwrap();
-    assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
-    assert_eq!(token, TokenData::Keyword(Keyword::Exit));
-}
+mod keyword {
+    test_keyword_tokenizes!(Exit);
 
-#[test]
-fn keyword_let_tokenizes() {
-    let tokens: Result<Vec<_>, _> = "let".tokenize().collect();
-    assert!(tokens.is_ok());
-    let tokens = tokens.unwrap();
-    assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
-    assert_eq!(token, TokenData::Keyword(Keyword::Let));
-}
+    test_keyword_tokenizes!(Let);
+    test_keyword_tokenizes!(Mut);
 
-#[test]
-fn keyword_mut_tokenizes() {
-    let tokens: Result<Vec<_>, _> = "mut".tokenize().collect();
-    assert!(tokens.is_ok());
-    let tokens = tokens.unwrap();
-    assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
-    assert_eq!(token, TokenData::Keyword(Keyword::Mut));
-}
+    test_keyword_tokenizes!(If);
+    test_keyword_tokenizes!(Else);
 
-#[test]
-fn keyword_if_tokenizes() {
-    let tokens: Result<Vec<_>, _> = "if".tokenize().collect();
-    assert!(tokens.is_ok());
-    let tokens = tokens.unwrap();
-    assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
-    assert_eq!(token, TokenData::Keyword(Keyword::If));
-}
+    test_keyword_tokenizes!(Loop);
+    test_keyword_tokenizes!(While);
 
-#[test]
-fn keyword_else_tokenizes() {
-    let tokens: Result<Vec<_>, _> = "else".tokenize().collect();
-    assert!(tokens.is_ok());
-    let tokens = tokens.unwrap();
-    assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
-    assert_eq!(token, TokenData::Keyword(Keyword::Else));
-}
-
-#[test]
-fn keyword_while_tokenizes() {
-    let tokens: Result<Vec<_>, _> = "while".tokenize().collect();
-    assert!(tokens.is_ok());
-    let tokens = tokens.unwrap();
-    assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
-    assert_eq!(token, TokenData::Keyword(Keyword::While));
+    test_keyword_tokenizes!(Break);
+    test_keyword_tokenizes!(Continue);
 }
 
 #[test]
