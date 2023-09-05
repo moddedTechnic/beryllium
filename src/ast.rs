@@ -8,6 +8,8 @@ pub enum Statement {
     Exit { value: Expr },
     Expr(Expr),
     Let { identifier: String, value: Expr, is_mutable: bool },
+
+    Break, Continue,
 }
 
 
@@ -37,6 +39,8 @@ pub enum Expr {
 
     Block(Vec<Statement>),
     If { check: Box<Expr>, body: Box<Statement>, els: Option<Box<Statement>> },
+    Loop { body: Box<Statement> },
+    While { check: Box<Expr>, body: Box<Statement> },
 }
 
 impl Expr {

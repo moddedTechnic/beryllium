@@ -1,6 +1,6 @@
 use crate::{
     ast::*,
-    context::Context,
+    context::{Context, LabelFrame},
 };
 use super::{
     CodegenError,
@@ -42,6 +42,15 @@ impl Codegen for Statement {
                 let code = value.codegen_x86(context);
                 context.declare_variable(identifier, is_mutable);
                 code
+            },
+
+            Self::Break => {
+                let LabelFrame { start: _, end } = context.get_labelled_region().expect("can't break from current context");
+                Ok(format!("    jmp {end}\n"))
+            },
+            Self::Continue => {
+                let LabelFrame { start, end: _ } = context.get_labelled_region().expect("can't continue from current context");
+                Ok(format!("    jmp {start}\n"))
             },
         }
     }
@@ -226,10 +235,12 @@ impl Codegen for Expr {
                 Ok(code)
             }
             Self::If { check, body, els } => {
+                let if_label = context.create_label("if");
                 let else_label = context.create_label("else");
                 let endif_label = context.create_label("endif");
 
-                let mut code = check.codegen_x86(context)?;
+                let mut code = format!("{if_label}:\n");
+                code += check.codegen_x86(context)?.as_str();
                 code += context.pop("rax").as_str();
                 code += "    or rax, rax\n";
                 code += format!("    jz {else_label}\n").as_str();
@@ -246,6 +257,47 @@ impl Codegen for Expr {
                 code += format!("{endif_label}:\n").as_str();
                 Ok(code)
             },
+            Self::Loop { body } => {
+                let loop_label = context.create_label("loop");
+                let endloop_label = context.create_label("endloop");
+
+                context.enter_labelled_region(LabelFrame {
+                    start:  loop_label.clone(),
+                    end: endloop_label.clone(),
+                });
+
+                let mut code = format!("{loop_label}:\n");
+                code += body.codegen_x86(context)?.as_str();
+                code += format!("    jmp {loop_label}\n").as_str();
+                code += format!("{endloop_label}:\n").as_str();
+
+                context.exit_labelled_region();
+
+                Ok(code)
+            }
+            Self::While { check, body } => {
+                let while_label = context.create_label("while");
+                let endwhile_label = context.create_label("endwhile");
+
+
+                context.enter_labelled_region(LabelFrame {
+                    start:  while_label.clone(),
+                    end: endwhile_label.clone(),
+                });
+
+                let mut code =  format!("{while_label}:\n");
+                code += check.codegen_x86(context)?.as_str();
+                code += context.pop("rax").as_str();
+                code += "    or rax, rax\n";
+                code += format!("    jz {endwhile_label}\n").as_str();
+                code += body.codegen_x86(context)?.as_str();
+                code += format!("    jmp {while_label}\n").as_str();
+                code += format!("{endwhile_label}:\n").as_str();
+
+                context.exit_labelled_region();
+
+                Ok(code)
+            }
         }
     }
 }

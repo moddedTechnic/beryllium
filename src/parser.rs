@@ -99,6 +99,26 @@ impl Parser {
                     Ok(Statement::Let { identifier, value, is_mutable })
                 },
                 Keyword::If => self.parse_if().map(Statement::Expr),
+                Keyword::Loop => self.parse_loop().map(Statement::Expr),
+                Keyword::While => self.parse_while().map(Statement::Expr),
+
+                Keyword::Break => {
+                    self.consume()?;
+                    match self.consume()?.expect("a semicolon") {
+                        Token { data: TokenData::Symbol(Symbol::Semi), location: _ } => (),
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    Ok(Statement::Break)
+                },
+                Keyword::Continue => {
+                    self.consume()?;
+                    match self.consume()?.expect("a semicolon") {
+                        Token { data: TokenData::Symbol(Symbol::Semi), location: _ } => (),
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    Ok(Statement::Continue)
+                },
+
                 kwd => Err(ParseError::UnexpectedToken(Token { data: TokenData::Keyword(kwd), location })),
             },
             Token {
@@ -301,6 +321,8 @@ impl Parser {
 
             Token { data: TokenData::Symbol(Symbol::LBrace), location: _ } => self.parse_block(),
             Token { data: TokenData::Keyword(Keyword::If), location: _ } => self.parse_if(),
+            Token { data: TokenData::Keyword(Keyword::Loop), location: _ } => self.parse_loop(),
+            Token { data: TokenData::Keyword(Keyword::While), location: _ } => self.parse_while(),
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
     }
@@ -343,6 +365,33 @@ impl Parser {
             Some(_) | None => None,
         };
         Ok(Expr::If { check, body, els })
+    }
+
+    fn parse_loop(&mut self) -> Result<Expr, ParseError> {
+        match self.consume()?.expect("keyword `loop`") {
+            Token { data: TokenData::Keyword(Keyword::Loop), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        }
+        let body = Box::new(self.parse_statement()?);
+        Ok(Expr::Loop { body })
+    }
+
+    fn parse_while(&mut self) -> Result<Expr, ParseError> {
+        match self.consume()?.expect("keyword `while`") {
+            Token { data: TokenData::Keyword(Keyword::While), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        }
+        match self.consume()?.expect("a left parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::LParen), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok))
+        };
+        let check = Box::new(self.parse_expression()?);
+        match self.consume()?.expect("a right parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok))
+        };
+        let body = Box::new(self.parse_statement()?);
+        Ok(Expr::While { check, body })
     }
 
     fn is_empty(&mut self) -> Result<bool, TokenizerError> {
