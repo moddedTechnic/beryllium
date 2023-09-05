@@ -9,7 +9,7 @@ pub enum Statement {
     Expr(Expr),
     Let { identifier: String, value: Expr, is_mutable: bool },
 
-    Break,
+    Break, Continue,
 }
 
 

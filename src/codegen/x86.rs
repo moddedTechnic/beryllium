@@ -47,7 +47,11 @@ impl Codegen for Statement {
             Self::Break => {
                 let LabelFrame { start: _, end } = context.get_labelled_region().expect("can't break from current context");
                 Ok(format!("    jmp {end}\n"))
-            }
+            },
+            Self::Continue => {
+                let LabelFrame { start, end: _ } = context.get_labelled_region().expect("can't continue from current context");
+                Ok(format!("    jmp {start}\n"))
+            },
         }
     }
 }

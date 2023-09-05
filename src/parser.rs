@@ -109,7 +109,15 @@ impl Parser {
                         tok => return Err(ParseError::UnexpectedToken(tok))
                     };
                     Ok(Statement::Break)
-                }
+                },
+                Keyword::Continue => {
+                    self.consume()?;
+                    match self.consume()?.expect("a semicolon") {
+                        Token { data: TokenData::Symbol(Symbol::Semi), location: _ } => (),
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    Ok(Statement::Continue)
+                },
 
                 kwd => Err(ParseError::UnexpectedToken(Token { data: TokenData::Keyword(kwd), location })),
             },
