@@ -85,10 +85,24 @@ impl VariableStack {
 
 
 #[derive(Clone, Debug)]
+pub struct LabelFrame {
+    pub start: String,
+    pub end: String,
+}
+
+impl From<(String, String)> for LabelFrame {
+    fn from((start, end): (String, String)) -> Self {
+        Self { start, end }
+    }
+}
+
+
+#[derive(Clone, Debug)]
 pub struct Context {
     stack_size: u64,
     variables: VariableStack,
     label_counts: HashMap<String, u64>,
+    label_stack: Vec<LabelFrame>,
 }
 
 impl Context {
@@ -97,6 +111,7 @@ impl Context {
             stack_size: 0,
             variables: VariableStack::new(),
             label_counts: HashMap::new(),
+            label_stack: Vec::new(),
         }
     }
 
@@ -153,6 +168,22 @@ impl Context {
     pub fn exit(&mut self) -> String {
         let frame = self.variables.pop().expect("trying to exit from base frame");
         format!("    add rsp, {}\n", frame.stack_size * 8)
+    }
+
+    pub fn enter_labelled_region(&mut self, frame: impl Into<LabelFrame>) {
+        self.label_stack.push(frame.into())
+    }
+
+    pub fn exit_labelled_region(&mut self) -> Option<LabelFrame> {
+        self.label_stack.pop()
+    }
+
+    pub fn get_labelled_region(&mut self) -> Option<LabelFrame> {
+        let last_index = match self.label_stack.len() {
+            0 => return None,
+            l => l - 1,
+        };
+        self.label_stack.get(last_index).cloned()
     }
 }
 
