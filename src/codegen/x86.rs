@@ -226,10 +226,12 @@ impl Codegen for Expr {
                 Ok(code)
             }
             Self::If { check, body, els } => {
+                let if_label = context.create_label("if");
                 let else_label = context.create_label("else");
                 let endif_label = context.create_label("endif");
 
-                let mut code = check.codegen_x86(context)?;
+                let mut code = format!("{if_label}:\n");
+                code += check.codegen_x86(context)?.as_str();
                 code += context.pop("rax").as_str();
                 code += "    or rax, rax\n";
                 code += format!("    jz {else_label}\n").as_str();
@@ -250,10 +252,18 @@ impl Codegen for Expr {
                 let while_label = context.create_label("while");
                 let endwhile_label = context.create_label("endwhile");
 
-                let mut code = check.codegen_x86(context)?;
-                code += context.pop("rax").as_str();
-                code += "    or rax, rax\n";
-                code += format!("    jnz {endwhile_label}").as_str();
+                let mut check_code = check.codegen_x86(context)?;
+                check_code += context.pop("rax").as_str();
+                check_code += "    or rax, rax\n";
+
+                let mut code = check_code.clone();
+                code += format!("    jz {endwhile_label}\n").as_str();
+                code += format!("{while_label}:\n").as_str();
+                code += body.codegen_x86(context)?.as_str();
+                code += check_code.as_str();
+                code += format!("    jnz {while_label}\n").as_str();
+                code += format!("{endwhile_label}:\n").as_str();
+                Ok(code)
             }
         }
     }

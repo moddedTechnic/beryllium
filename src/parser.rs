@@ -99,6 +99,7 @@ impl Parser {
                     Ok(Statement::Let { identifier, value, is_mutable })
                 },
                 Keyword::If => self.parse_if().map(Statement::Expr),
+                Keyword::While => self.parse_while().map(Statement::Expr),
                 kwd => Err(ParseError::UnexpectedToken(Token { data: TokenData::Keyword(kwd), location })),
             },
             Token {
@@ -301,6 +302,7 @@ impl Parser {
 
             Token { data: TokenData::Symbol(Symbol::LBrace), location: _ } => self.parse_block(),
             Token { data: TokenData::Keyword(Keyword::If), location: _ } => self.parse_if(),
+            Token { data: TokenData::Keyword(Keyword::While), location: _ } => self.parse_while(),
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
     }
@@ -343,6 +345,24 @@ impl Parser {
             Some(_) | None => None,
         };
         Ok(Expr::If { check, body, els })
+    }
+
+    fn parse_while(&mut self) -> Result<Expr, ParseError> {
+        match self.consume()?.expect("keyword `while`") {
+            Token { data: TokenData::Keyword(Keyword::While), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        }
+        match self.consume()?.expect("a left parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::LParen), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok))
+        };
+        let check = Box::new(self.parse_expression()?);
+        match self.consume()?.expect("a right parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+            tok => return Err(ParseError::UnexpectedToken(tok))
+        };
+        let body = Box::new(self.parse_statement()?);
+        Ok(Expr::While { check, body })
     }
 
     fn is_empty(&mut self) -> Result<bool, TokenizerError> {
