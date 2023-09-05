@@ -43,7 +43,11 @@ impl VariableStack {
     }
 
     pub fn peek(&mut self) -> Option<&mut VariableFrame> {
-        self.0.get_mut(0)
+        let last_index = match self.0.len() {
+            0 => return None,
+            l => l - 1,
+        };
+        self.0.get_mut(last_index)
     }
 
     pub fn declare_variable(&mut self, name: String, is_mutable: bool) {
@@ -148,7 +152,7 @@ impl Context {
 
     pub fn exit(&mut self) -> String {
         let frame = self.variables.pop().expect("trying to exit from base frame");
-        format!("    add rsp, {}\n", frame.stack_size * 8 + 8)
+        format!("    add rsp, {}\n", frame.stack_size * 8)
     }
 }
 
