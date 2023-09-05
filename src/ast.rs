@@ -1,6 +1,12 @@
 
 #[derive(Clone, Debug)]
-pub struct Program(pub Vec<Statement>);
+pub struct Program(pub Vec<Item>);
+
+
+#[derive(Clone, Debug)]
+pub enum Item {
+    Function { name: String, body: Statement },
+}
 
 
 #[derive(Clone, Debug)]

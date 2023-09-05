@@ -1,2 +1,4 @@
-exit(11 / 2);
+
+fn _start()
+    exit(11 / 2);
 

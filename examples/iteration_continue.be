@@ -1,12 +1,14 @@
 
-let mut x = 0;
+fn _start() {
+    let mut x = 0;
 
-loop {
-    x += 1;
-    if (x < 10)
-        continue;
-    break;
+    loop {
+        x += 1;
+        if (x < 10)
+            continue;
+        break;
+    }
+
+    exit(x);
 }
-
-exit(x);
 

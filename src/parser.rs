@@ -10,7 +10,7 @@ use crate::{
     },
     ast::{
         Expr,
-        Program, Statement,
+        Program, Statement, Item,
     },
 };
 
@@ -49,9 +49,32 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Program, ParseError> {
         let mut program = Vec::new();
         while !self.is_empty()? {
-            program.push(self.parse_statement()?);
+            program.push(self.parse_item()?);
         }
         Ok(Program(program))
+    }
+
+    fn parse_item(&mut self) -> Result<Item, ParseError> {
+        match self.peek()?.expect("a token") {
+            Token { data: TokenData::Keyword(Keyword::Fn), location: _ } => {
+                self.consume()?;
+                let name = match self.consume()?.expect("an identifier") {
+                    Token { data: TokenData::Identifier(ident), location: _ } => ident,
+                    tok => return Err(ParseError::UnexpectedToken(tok)),
+                };
+                match self.consume()?.expect("a left parenthesis") {
+                    Token { data: TokenData::Symbol(Symbol::LParen), location: _ } => (),
+                    tok => return Err(ParseError::UnexpectedToken(tok))
+                };
+                match self.consume()?.expect("a right parenthesis") {
+                    Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+                    tok => return Err(ParseError::UnexpectedToken(tok))
+                };
+                let body = self.parse_statement()?;
+                Ok(Item::Function { name, body })
+            },
+            tok => Err(ParseError::UnexpectedToken(tok)),
+        }
     }
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {

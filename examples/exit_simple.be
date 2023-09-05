@@ -1,1 +1,3 @@
-exit(0);
+fn _start()
+    exit(0);
+

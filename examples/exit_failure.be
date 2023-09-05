@@ -1,1 +1,4 @@
-exit(20);
+
+fn _start()
+    exit(20);
+

@@ -1,4 +1,6 @@
 
-if (2 <= 1)
-    exit(0);
-else exit(1);
+fn _start()
+    if (2 <= 1)
+        exit(0);
+    else exit(1);
+

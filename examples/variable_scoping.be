@@ -1,7 +1,10 @@
-let x = 5;
 
-if (x)
-    let x = 4;
+fn _start() {
+    let x = 5;
 
-exit(x);
+    if (x)
+        let x = 4;
+
+    exit(x);
+}
 

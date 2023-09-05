@@ -75,7 +75,6 @@ mod example {
         process::Command,
     };
 
-    valid_example!(empty_program, 0);
     valid_example!(exit_failure, 20);
     valid_example!(exit_simple, 0);
     valid_example!(exit_variable, 20);

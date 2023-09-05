@@ -15,14 +15,24 @@ pub trait Codegen {
 
 impl Codegen for Program {
     fn codegen_x86(self, context: &mut Context) -> Result {
-        let mut code = String::from("global _start\n_start:\n");
-        for stmt in self.0 {
-            code.push_str(stmt.codegen_x86(context)?.as_str());
+        let mut code = String::from("global _start\n");
+        for item in self.0 {
+            code.push_str(item.codegen_x86(context)?.as_str());
         }
-        code.push_str("    mov rax, 60\n");
-        code.push_str("    mov rdi, 0\n");
-        code.push_str("    syscall\n");
         Ok(code)
+    }
+}
+
+
+impl Codegen for Item {
+    fn codegen_x86(self, context: &mut Context) -> Result {
+        match self {
+            Self::Function { name, body } => {
+                let mut code = format!("{name}:\n");
+                code += body.codegen_x86(context)?.as_str();
+                Ok(code)
+            },
+        }
     }
 }
 

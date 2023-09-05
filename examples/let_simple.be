@@ -1,2 +1,6 @@
-let x = 10;
+
+fn _start() {
+    let x = 10;
+    exit(0);
+}
 
