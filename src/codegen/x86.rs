@@ -233,6 +233,10 @@ impl Codegen for Expr {
                     .ok_or(CodegenError::IdentifierNotDeclared(ident))?
             ),
 
+            Self::FunctionCall { name } => {
+                Ok(format!("    call {name}\n"))
+            }
+
             Self::Block(stmts) => {
                 let mut code = context.enter();
                 code += stmts

@@ -340,7 +340,20 @@ impl Parser {
     fn parse_atom(&mut self) -> Result<Expr, ParseError> {
         match self.peek()?.expect("a token") {
             Token { data: TokenData::IntegerLiteral(lit), location: _ } => { self.consume()?; Ok(Expr::IntegerLiteral(lit)) },
-            Token { data: TokenData::Identifier(ident), location: _ } => { self.consume()?; Ok(Expr::Identifier(ident)) }
+            Token { data: TokenData::Identifier(ident), location: _ } => {
+                self.consume()?;
+                match self.peek()? {
+                    Some(Token { data: TokenData::Symbol(Symbol::LParen), location: _ }) => {
+                        self.consume()?;
+                        match self.consume()?.expect("a right parenthesis `)`") {
+                            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+                            tok => return Err(ParseError::UnexpectedToken(tok)),
+                        };
+                        Ok(Expr::FunctionCall { name: ident })
+                    },
+                    _ => Ok(Expr::Identifier(ident)),
+                }
+            }
 
             Token { data: TokenData::Symbol(Symbol::LBrace), location: _ } => self.parse_block(),
             Token { data: TokenData::Keyword(Keyword::If), location: _ } => self.parse_if(),

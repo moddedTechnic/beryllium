@@ -40,6 +40,8 @@ pub enum Expr {
     Greater(Box<Expr>, Box<Expr>),
     GreaterEq(Box<Expr>, Box<Expr>),
 
+    FunctionCall { name: String },
+
     IntegerLiteral(String),
     Identifier(String),
 
