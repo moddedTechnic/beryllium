@@ -120,6 +120,8 @@ mod example {
     valid_example!(iteration_loop, 10);
     valid_example!(iteration_continue, 10);
     valid_example!(function_call, 1);
+    valid_example!(function_call_arg, 2);
+    valid_example!(function_call_args, 3);
 
     invalid_example!(variable_mutability_invalid, beryllium::CompileError::ChangedImmutableVariable(_));
 }

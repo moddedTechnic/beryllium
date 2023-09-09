@@ -5,7 +5,13 @@ pub struct Program(pub Vec<Item>);
 
 #[derive(Clone, Debug)]
 pub enum Item {
-    Function { name: String, body: Statement },
+    Function { name: String, params: Vec<Param>, body: Statement },
+}
+
+
+#[derive(Clone, Debug)]
+pub struct Param {
+    pub name: String,
 }
 
 
@@ -40,7 +46,7 @@ pub enum Expr {
     Greater(Box<Expr>, Box<Expr>),
     GreaterEq(Box<Expr>, Box<Expr>),
 
-    FunctionCall { name: String },
+    FunctionCall { name: String, args: Vec<Expr> },
 
     IntegerLiteral(String),
     Identifier(String),

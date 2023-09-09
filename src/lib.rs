@@ -4,6 +4,7 @@ mod context;
 mod iter;
 mod parser;
 mod tokenize;
+mod type_registry;
 
 use std::{
     fs::File,
@@ -11,9 +12,12 @@ use std::{
     path::PathBuf,
 };
 
-use codegen::CodegenError;
-use parser::ParseError;
-use tokenize::{Token, TokenizerError};
+use crate::{
+    codegen::CodegenError,
+    parser::ParseError,
+    tokenize::{Token, TokenizerError},
+    type_registry::TypeRegistry,
+};
 
 use crate::context::Context;
 
@@ -55,6 +59,7 @@ impl CompileArgs {
 #[derive(Debug)]
 pub enum CompileError {
     IdentifierNotDeclared(String),
+    FunctionNotDeclared(String),
     ChangedImmutableVariable(String),
     UnexpectedToken(Token),
     UnrecognizedCharacter(char),
@@ -75,6 +80,7 @@ impl From<CodegenError> for CompileError {
         match value {
             CodegenError::IdentifierNotDeclared(ident) => Self::IdentifierNotDeclared(ident),
             CodegenError::ChangedImmutableVariable(ident) => Self::ChangedImmutableVariable(ident),
+            CodegenError::FunctionNotDeclared(ident) => Self::FunctionNotDeclared(ident),
         }
     }
 }
@@ -131,9 +137,12 @@ pub fn compile(args: &CompileArgs) -> Result<(), CompileError> {
     let mut parser = Parser::new(tokens);
     let tree = parser.parse()?;
 
+    println!("    registering types");
+    let type_checker = TypeRegistry::from(&tree);
+
     println!("    codegen");
     use crate::codegen::x86::Codegen;
-    let mut context = Context::new();
+    let mut context = Context::new(type_checker);
     let generated_code = tree.codegen_x86(&mut context)?;
 
     println!("    writing");

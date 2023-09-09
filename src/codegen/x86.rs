@@ -27,9 +27,11 @@ impl Codegen for Program {
 impl Codegen for Item {
     fn codegen_x86(self, context: &mut Context) -> Result {
         match self {
-            Self::Function { name, body } => {
+            Self::Function { name, params: _, body } => {
                 let mut code = format!("{name}:\n");
+                code += &context.enter_function(name)?;
                 code += body.codegen_x86(context)?.as_str();
+                code += &context.exit_function()?;
                 Ok(code)
             },
         }
@@ -233,8 +235,16 @@ impl Codegen for Expr {
                     .ok_or(CodegenError::IdentifierNotDeclared(ident))?
             ),
 
-            Self::FunctionCall { name } => {
-                Ok(format!("    call {name}\n"))
+            Self::FunctionCall { name, args } => {
+                let mut code = String::new();
+                code += args
+                    .into_iter()
+                    .map(|arg| arg.codegen_x86(context))
+                    .reduce(|a, b| Ok(a? + &b?))
+                    .unwrap_or(Ok(String::new()))?
+                    .as_str();
+                code += format!("    call {name}\n").as_str();
+                Ok(code)
             }
 
             Self::Block(stmts) => {
