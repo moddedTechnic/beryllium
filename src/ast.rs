@@ -22,6 +22,7 @@ pub enum Statement {
     Let { identifier: String, value: Expr, is_mutable: bool },
 
     Break, Continue,
+    Return(Expr),
 }
 
 

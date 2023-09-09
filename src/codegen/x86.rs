@@ -28,9 +28,14 @@ impl Codegen for Item {
     fn codegen_x86(self, context: &mut Context) -> Result {
         match self {
             Self::Function { name, params: _, body } => {
+                let end_label = context.create_label(format!("end{name}"));
+
+                context.enter_labelled_region((name.clone(), end_label.clone()));
+
                 let mut code = format!("{name}:\n");
                 code += &context.enter_function(name)?;
-                code += body.codegen_x86(context)?.as_str();
+                code += &body.codegen_x86(context)?;
+                code += &format!("{end_label}:\n");
                 code += &context.exit_function()?;
                 Ok(code)
             },
@@ -63,6 +68,14 @@ impl Codegen for Statement {
             Self::Continue => {
                 let LabelFrame { start, end: _ } = context.get_labelled_region().expect("can't continue from current context");
                 Ok(format!("    jmp {start}\n"))
+            },
+
+            Self::Return(value) => {
+                let mut code = value.codegen_x86(context)?;
+                code += &context.pop("rax");
+                let LabelFrame { start: _, end } = context.get_labelled_region().expect("can't return from current context");
+                code += &format!("    jmp {end}\n");
+                Ok(code)
             },
         }
     }
@@ -244,6 +257,7 @@ impl Codegen for Expr {
                     .unwrap_or(Ok(String::new()))?
                     .as_str();
                 code += format!("    call {name}\n").as_str();
+                code += &context.push("rax");
                 Ok(code)
             }
 

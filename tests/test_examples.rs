@@ -29,6 +29,7 @@ macro_rules! valid_example {
             println!("    runnning");
             let output = Command::new(target_file).output().expect("executable runs correctly");
             let code = output.status.code();
+            println!("        {code:?}");
             assert!(code.is_some());
             assert_eq!(code.unwrap(), $exit_code);
             println!("    SUCCESS\n");
@@ -122,6 +123,7 @@ mod example {
     valid_example!(function_call, 1);
     valid_example!(function_call_arg, 2);
     valid_example!(function_call_args, 3);
+    valid_example!(function_return, 4);
 
     invalid_example!(variable_mutability_invalid, beryllium::CompileError::ChangedImmutableVariable(_));
 }

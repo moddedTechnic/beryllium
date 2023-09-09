@@ -66,7 +66,7 @@ pub enum Keyword {
     If, Else,
     Loop, While,
     Break, Continue,
-    Fn,
+    Fn, Return,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -151,7 +151,8 @@ impl TokenStream {
             "break"    => TokenData::Keyword(Keyword::Break),
             "continue" => TokenData::Keyword(Keyword::Continue),
 
-            "fn" => TokenData::Keyword(Keyword::Fn),
+            "fn"     => TokenData::Keyword(Keyword::Fn),
+            "return" => TokenData::Keyword(Keyword::Return),
             
             _ => TokenData::Identifier(buffer),
         };
@@ -364,6 +365,7 @@ mod keyword {
     test_keyword_tokenizes!(Continue);
 
     test_keyword_tokenizes!(Fn);
+    test_keyword_tokenizes!(Return);
 }
 
 mod symbol {
