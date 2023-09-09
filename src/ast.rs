@@ -1,6 +1,18 @@
 
 #[derive(Clone, Debug)]
-pub struct Program(pub Vec<Statement>);
+pub struct Program(pub Vec<Item>);
+
+
+#[derive(Clone, Debug)]
+pub enum Item {
+    Function { name: String, params: Vec<Param>, body: Statement },
+}
+
+
+#[derive(Clone, Debug)]
+pub struct Param {
+    pub name: String,
+}
 
 
 #[derive(Clone, Debug)]
@@ -10,6 +22,7 @@ pub enum Statement {
     Let { identifier: String, value: Expr, is_mutable: bool },
 
     Break, Continue,
+    Return(Expr),
 }
 
 
@@ -33,6 +46,8 @@ pub enum Expr {
     LessEq(Box<Expr>, Box<Expr>),
     Greater(Box<Expr>, Box<Expr>),
     GreaterEq(Box<Expr>, Box<Expr>),
+
+    FunctionCall { name: String, args: Vec<Expr> },
 
     IntegerLiteral(String),
     Identifier(String),

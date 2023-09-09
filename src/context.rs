@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{iter::Reversed, codegen::CodegenError};
+use crate::{
+    codegen::CodegenError,
+    iter::Reversed,
+    type_registry::TypeRegistry,
+};
 
 
 #[derive(Clone, Debug, Default)]
@@ -62,6 +66,18 @@ impl VariableStack {
         );
     }
 
+    pub fn declare_variable_at(&mut self, name: String, is_mutable: bool, offset: u64) {
+        match self.peek() {
+            Some(frame) => Some(frame),
+            None => Some(self.push(VariableFrame::default())),
+        }.map(|frame|
+            frame.variables.insert(
+                name,
+                VariableMeta { stack_frame_offset: offset, is_mutable },
+            )
+        );
+    }
+
     pub fn get_offset(&mut self, name: &String) -> Option<u64> {
         let mut offset = 0;
         for frame in self.0.reversed() {
@@ -103,15 +119,17 @@ pub struct Context {
     variables: VariableStack,
     label_counts: HashMap<String, u64>,
     label_stack: Vec<LabelFrame>,
+    type_registry: TypeRegistry,
 }
 
 impl Context {
-    pub fn new() -> Self {
+    pub fn new(type_registry: TypeRegistry) -> Self {
         Self {
             stack_size: 0,
             variables: VariableStack::new(),
             label_counts: HashMap::new(),
             label_stack: Vec::new(),
+            type_registry,
         }
     }
 
@@ -184,6 +202,55 @@ impl Context {
             l => l - 1,
         };
         self.label_stack.get(last_index).cloned()
+    }
+
+    pub fn enter_function(&mut self, name: impl Into<String>) -> Result<String, CodegenError> {
+        let name: String = name.into();
+        let mut code = String::new();
+
+        let function = self.type_registry.get_function(name.clone()).cloned();
+        let function = function.ok_or(CodegenError::FunctionNotDeclared(name))?;
+
+        // push params frame
+        code += &self.enter();
+
+        // stack size + 1 for return address
+        self.variables.peek().unwrap().stack_size += 1;
+
+        // declare params
+        let param_count = function.params.len() as u64;
+        self.variables.peek().unwrap().stack_size += param_count;
+        function
+            .params
+            .into_iter()
+            .enumerate()
+            .map(|(i, p)| (i as u64, p))
+            .for_each(|(i, param)|
+                self.variables.declare_variable_at(
+                    param.name,
+                    false,
+                    param_count - i
+                )
+            )
+        ;
+
+        // push variables frame
+        code += &self.enter();
+        Ok(code)
+    }
+
+    pub fn exit_function(&mut self) -> Result<String, CodegenError> {
+        let mut code = String::new();
+        // pop variable frame
+        code += &self.exit();
+        // rbx <- [rsp]
+        code += "    mov rbx, [rsp]\n";
+        // pop params frame
+        code += &self.exit();
+        // push rbx  (can just push since it will be popped by ret)
+        code += "    push rbx\n";
+        code += "    ret\n";
+        Ok(code)
     }
 }
 

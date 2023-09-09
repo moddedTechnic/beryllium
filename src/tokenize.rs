@@ -66,6 +66,7 @@ pub enum Keyword {
     If, Else,
     Loop, While,
     Break, Continue,
+    Fn, Return,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -74,6 +75,7 @@ pub enum Symbol {
     LBrace, RBrace,
     LAngle, RAngle,
     Semi,
+    Comma,
     Equals,
     Plus, Minus, Star, Slash, Percent,
     PlusEq, MinusEq, StarEq, SlashEq, PercentEq,
@@ -149,6 +151,9 @@ impl TokenStream {
             "break"    => TokenData::Keyword(Keyword::Break),
             "continue" => TokenData::Keyword(Keyword::Continue),
 
+            "fn"     => TokenData::Keyword(Keyword::Fn),
+            "return" => TokenData::Keyword(Keyword::Return),
+            
             _ => TokenData::Identifier(buffer),
         };
         Token { data, location }
@@ -195,6 +200,7 @@ impl TokenStream {
                 _ => Ok(Symbol::Equals)
             },
             ';' => Ok(Symbol::Semi),
+            ',' => Ok(Symbol::Comma),
 
             '+' => match self.peek().unwrap_or(0 as char) {
                 '=' => { self.consume(); Ok(Symbol::PlusEq) },
@@ -271,6 +277,22 @@ macro_rules! test_keyword_tokenizes {
     };
 }
 
+macro_rules! test_symbol_tokenizes {
+    ($symbol_name:ident, $symbol:literal) => {
+        #[test]
+        #[allow(non_snake_case)]
+        fn $symbol_name() {
+            use crate::tokenize::*;
+            let tokens: Result<Vec<_>, _> = $symbol.tokenize().collect();
+            assert!(tokens.is_ok());
+            let tokens = tokens.unwrap();
+            assert_eq!(tokens.len(), 1);
+            let token = tokens.get(0).unwrap().clone().data;
+            assert_eq!(token, TokenData::Symbol(Symbol::$symbol_name));
+        }
+    };
+}
+
 
 #[test]
 fn integer_literal_tokenizes() {
@@ -341,6 +363,21 @@ mod keyword {
 
     test_keyword_tokenizes!(Break);
     test_keyword_tokenizes!(Continue);
+
+    test_keyword_tokenizes!(Fn);
+    test_keyword_tokenizes!(Return);
+}
+
+mod symbol {
+    test_symbol_tokenizes!(Comma, ",");
+    test_symbol_tokenizes!(Semi, ";");
+    test_symbol_tokenizes!(Equals, "=");
+
+    test_symbol_tokenizes!(Plus, "+");
+    test_symbol_tokenizes!(Minus, "-");
+    test_symbol_tokenizes!(Star, "*");
+    test_symbol_tokenizes!(Slash, "/");
+    test_symbol_tokenizes!(Percent, "%");
 }
 
 #[test]

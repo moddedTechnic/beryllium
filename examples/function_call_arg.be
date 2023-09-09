@@ -1,6 +1,9 @@
 
 fn _start() {
-    let x = 20;
+    main(2);
+}
+
+fn main(x) {
     exit(x);
 }
 

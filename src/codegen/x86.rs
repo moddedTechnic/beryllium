@@ -15,14 +15,31 @@ pub trait Codegen {
 
 impl Codegen for Program {
     fn codegen_x86(self, context: &mut Context) -> Result {
-        let mut code = String::from("global _start\n_start:\n");
-        for stmt in self.0 {
-            code.push_str(stmt.codegen_x86(context)?.as_str());
+        let mut code = String::from("global _start\n");
+        for item in self.0 {
+            code.push_str(item.codegen_x86(context)?.as_str());
         }
-        code.push_str("    mov rax, 60\n");
-        code.push_str("    mov rdi, 0\n");
-        code.push_str("    syscall\n");
         Ok(code)
+    }
+}
+
+
+impl Codegen for Item {
+    fn codegen_x86(self, context: &mut Context) -> Result {
+        match self {
+            Self::Function { name, params: _, body } => {
+                let end_label = context.create_label(format!("end{name}"));
+
+                context.enter_labelled_region((name.clone(), end_label.clone()));
+
+                let mut code = format!("{name}:\n");
+                code += &context.enter_function(name)?;
+                code += &body.codegen_x86(context)?;
+                code += &format!("{end_label}:\n");
+                code += &context.exit_function()?;
+                Ok(code)
+            },
+        }
     }
 }
 
@@ -51,6 +68,14 @@ impl Codegen for Statement {
             Self::Continue => {
                 let LabelFrame { start, end: _ } = context.get_labelled_region().expect("can't continue from current context");
                 Ok(format!("    jmp {start}\n"))
+            },
+
+            Self::Return(value) => {
+                let mut code = value.codegen_x86(context)?;
+                code += &context.pop("rax");
+                let LabelFrame { start: _, end } = context.get_labelled_region().expect("can't return from current context");
+                code += &format!("    jmp {end}\n");
+                Ok(code)
             },
         }
     }
@@ -222,6 +247,19 @@ impl Codegen for Expr {
                 context.get_variable(&ident)
                     .ok_or(CodegenError::IdentifierNotDeclared(ident))?
             ),
+
+            Self::FunctionCall { name, args } => {
+                let mut code = String::new();
+                code += args
+                    .into_iter()
+                    .map(|arg| arg.codegen_x86(context))
+                    .reduce(|a, b| Ok(a? + &b?))
+                    .unwrap_or(Ok(String::new()))?
+                    .as_str();
+                code += format!("    call {name}\n").as_str();
+                code += &context.push("rax");
+                Ok(code)
+            }
 
             Self::Block(stmts) => {
                 let mut code = context.enter();

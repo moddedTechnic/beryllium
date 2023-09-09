@@ -9,8 +9,8 @@ use crate::{
         TokenizerError,
     },
     ast::{
-        Expr,
-        Program, Statement,
+        Param, Expr,
+        Program, Statement, Item,
     },
 };
 
@@ -49,9 +49,49 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Program, ParseError> {
         let mut program = Vec::new();
         while !self.is_empty()? {
-            program.push(self.parse_statement()?);
+            program.push(self.parse_item()?);
         }
         Ok(Program(program))
+    }
+
+    fn parse_item(&mut self) -> Result<Item, ParseError> {
+        match self.peek()?.expect("a token") {
+            Token { data: TokenData::Keyword(Keyword::Fn), location: _ } => {
+                self.consume()?;
+                let name = match self.consume()?.expect("an identifier") {
+                    Token { data: TokenData::Identifier(ident), location: _ } => ident,
+                    tok => return Err(ParseError::UnexpectedToken(tok)),
+                };
+                match self.consume()?.expect("a left parenthesis") {
+                    Token { data: TokenData::Symbol(Symbol::LParen), location: _ } => (),
+                    tok => return Err(ParseError::UnexpectedToken(tok))
+                };
+                let params = self.parse_params()?;
+                match self.consume()?.expect("a right parenthesis") {
+                    Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+                    tok => return Err(ParseError::UnexpectedToken(tok))
+                };
+                let body = self.parse_statement()?;
+                Ok(Item::Function { name, params, body })
+            },
+            tok => Err(ParseError::UnexpectedToken(tok)),
+        }
+    }
+
+    fn parse_params(&mut self) -> Result<Vec<Param>, ParseError> {
+        let name = match self.peek()?.expect("an identifier or a right parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => return Ok(vec![]),
+            Token { data: TokenData::Identifier(ident), location: _ } => ident,
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        };
+        self.consume()?;
+        let mut params = vec![Param { name }];
+        match self.peek()?.expect("a comma or a right parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+            Token { data: TokenData::Symbol(Symbol::Comma), location: _ } => { self.consume()?; params.extend(self.parse_params()?); },
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        };
+        Ok(params)
     }
 
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
@@ -118,6 +158,16 @@ impl Parser {
                     };
                     Ok(Statement::Continue)
                 },
+
+                Keyword::Return => {
+                    self.consume()?;
+                    let value = self.parse_expression()?;
+                    match self.consume()?.expect("a semicolon") {
+                        Token { data: TokenData::Symbol(Symbol::Semi), location: _ } => (),
+                        tok => return Err(ParseError::UnexpectedToken(tok))
+                    };
+                    Ok(Statement::Return(value))
+                }
 
                 kwd => Err(ParseError::UnexpectedToken(Token { data: TokenData::Keyword(kwd), location })),
             },
@@ -317,7 +367,21 @@ impl Parser {
     fn parse_atom(&mut self) -> Result<Expr, ParseError> {
         match self.peek()?.expect("a token") {
             Token { data: TokenData::IntegerLiteral(lit), location: _ } => { self.consume()?; Ok(Expr::IntegerLiteral(lit)) },
-            Token { data: TokenData::Identifier(ident), location: _ } => { self.consume()?; Ok(Expr::Identifier(ident)) }
+            Token { data: TokenData::Identifier(ident), location: _ } => {
+                self.consume()?;
+                match self.peek()? {
+                    Some(Token { data: TokenData::Symbol(Symbol::LParen), location: _ }) => {
+                        self.consume()?;
+                        let args = self.parse_args()?;
+                        match self.consume()?.expect("a right parenthesis `)`") {
+                            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+                            tok => return Err(ParseError::UnexpectedToken(tok)),
+                        };
+                        Ok(Expr::FunctionCall { name: ident, args })
+                    },
+                    _ => Ok(Expr::Identifier(ident)),
+                }
+            }
 
             Token { data: TokenData::Symbol(Symbol::LBrace), location: _ } => self.parse_block(),
             Token { data: TokenData::Keyword(Keyword::If), location: _ } => self.parse_if(),
@@ -325,6 +389,20 @@ impl Parser {
             Token { data: TokenData::Keyword(Keyword::While), location: _ } => self.parse_while(),
             tok => Err(ParseError::UnexpectedToken(tok)),
         }
+    }
+
+    fn parse_args(&mut self) -> Result<Vec<Expr>, ParseError> {
+        let expr = match self.peek()?.expect("an identifier or a right parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => return Ok(vec![]),
+            _ => self.parse_expression()?,
+        };
+        let mut args = vec![expr];
+        match self.peek()?.expect("a comma or a right parenthesis") {
+            Token { data: TokenData::Symbol(Symbol::RParen), location: _ } => (),
+            Token { data: TokenData::Symbol(Symbol::Comma), location: _ } => { self.consume()?; args.extend(self.parse_args()?); },
+            tok => return Err(ParseError::UnexpectedToken(tok)),
+        };
+        Ok(args)
     }
 
     fn parse_block(&mut self) -> Result<Expr, ParseError> {
