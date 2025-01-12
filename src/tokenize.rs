@@ -109,7 +109,7 @@ impl TokenStream {
     }
 
     fn peek(&self) -> Option<char> {
-        self.source.get(0).copied()
+        self.source.front().copied()
     }
 
     fn consume(&mut self) -> Option<char> {
@@ -300,7 +300,7 @@ fn integer_literal_tokenizes() {
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
+    let token = tokens.first().unwrap().clone().data;
     assert_eq!(token, TokenData::IntegerLiteral("123".into()));
 }
 
@@ -312,7 +312,7 @@ fn many_integer_literals_tokenize() {
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 3);
 
-    let token = tokens.get(0).unwrap().clone().data;
+    let token = tokens.first().unwrap().clone().data;
     assert_eq!(token, TokenData::IntegerLiteral("123".into()));
 
     let token = tokens.get(1).unwrap().clone().data;
@@ -328,7 +328,7 @@ fn identifier_tokenizes() {
     assert!(tokens.is_ok());
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 1);
-    let token = tokens.get(0).unwrap().clone().data;
+    let token = tokens.first().unwrap().clone().data;
     assert_eq!(token, TokenData::Identifier("main".into()));
 }
 
@@ -339,7 +339,7 @@ fn many_identifiers_tokenize() {
     let tokens = tokens.unwrap();
     assert_eq!(tokens.len(), 3);
 
-    let token = tokens.get(0).unwrap().clone().data;
+    let token = tokens.first().unwrap().clone().data;
     assert_eq!(token, TokenData::Identifier("main".into()));
 
     let token = tokens.get(1).unwrap().clone().data;
